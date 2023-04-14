@@ -25,7 +25,7 @@ with open(JSONLINES_FILENAME, "w") as f:
     json.dump(special_header, f)
     f.write("\n")
 
-client = OptimadeClient(base_urls="https://optimade.odbx.science", callbacks=[write_jsonl_file], silent=False)
+client = OptimadeClient(base_urls="https://dcgat.odbx.science", callbacks=[write_jsonl_file], silent=False)
 client.get(endpoint="info")
 client.get(endpoint="info/structures")
 client.get(endpoint="info/references")
