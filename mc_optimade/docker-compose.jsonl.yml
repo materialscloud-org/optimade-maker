@@ -1,0 +1,47 @@
+---
+version: '3'
+
+networks:
+  optimade:
+
+volumes:
+  mongo_database:
+    name: ${MONGODB_NAME}
+
+services:
+
+  mongo:
+    restart: always
+    image: mongo:4
+    volumes:
+      - mongo_database:/data/db:rw
+    networks:
+      - optimade
+
+  data_inject:
+    depends_on:
+      mongo:
+        condition: service_healthy
+    image: mc-data-inject
+    environment:
+      - DATA_SOURCE="example.jsonl"
+    networks:
+      - optimade
+
+  optimade:
+    restart: always
+    depends_on:
+      mongo:
+        condition: service_healthy
+      data_inject:
+        condition: service_complated_successfully
+    image: ghcr.io/materials-consortia/optimade:${OPTIDAME_TAG:-latest}
+    environment:
+      MONGO_FILENAME:
+      optimade_database_backend: mongodb
+      optimade_mongo_uri: mongodb://mongo:27017
+
+    ports:
+      - ${PUBLISH_PORT:-8081}:5000
+    networks:
+      - optimade

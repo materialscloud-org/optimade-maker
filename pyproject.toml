@@ -4,9 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "mc_optimade"
-authors = [
-    {name = "Jusong Yu", email = "jusong.yu@psi.ch"},
-]
+authors = []
 readme = "README.md"
 classifiers = [
     "License :: OSI Approved :: MIT License",
