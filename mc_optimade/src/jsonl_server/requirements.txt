@@ -1,0 +1,1 @@
+optimade[server]~=0.24.0
