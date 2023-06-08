@@ -5,7 +5,7 @@ from pathlib import Path
 import bson.json_util
 from pymongo import MongoClient
 
-client = MongoClient("mongodb://127.0.0.1:27018")
+client = MongoClient("mongodb://mongo:27017")
 collection = client["mc_optimade"]["structures"]
     
 with open(Path(__file__).parent.joinpath("optimade.jsonl")) as handle:
