@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 import sys
 from pathlib import Path
+import random
+import string
+import collections
 import tqdm
 import sys
 
@@ -8,41 +11,58 @@ import bson.json_util
 from pymongo import MongoClient
 
 # client = MongoClient("mongodb://mongo:27017") # when run from docker-compose
-client = MongoClient("mongodb://localhost:27017")
+client = MongoClient("mongodb://localhost:27017", connect=True)
 
-total_lines = 10136
-progress_bar = tqdm.tqdm(total=total_lines, desc="Loading data")
+total_lines = 5
+# progress_bar = tqdm.tqdm(total=total_lines, desc="Loading data")
 batch_size = 2000
 
 def main():
     
     db_name = sys.argv[1]
     jsonl_file = sys.argv[2]
-    
-    collection = client[db_name]["structures"]
+
+    load_jsonl(jsonl_file, db_name, "".join(random.choices(string.ascii_lowercase, k=4)))
+
+def load_jsonl(filename, database, prefix):
+
+    db = client[database]
+   
+    entry_collections = {entry_type: db[f"{prefix}-{entry_type}"] for entry_type in ("structures", "references")}
+    batch = collections.defaultdict(list)
         
-    with open(Path(__file__).parent.joinpath(jsonl_file)) as handle:
-        batch = []
+    with open(Path(__file__).parent.joinpath(filename)) as handle:
+        header = handle.readline()
+
         for json_str in handle:  
+
             try:
-                id = bson.json_util.loads(json_str)['id']
-                inp_data = bson.json_util.loads(json_str)['attributes']
+                entry = bson.json_util.loads(json_str)
+                id = entry['id']
+                type = entry['type']
+                inp_data = entry['attributes']
                 inp_data['id'] = id
-                progress_bar.update(1)
                 # Append the data to the batch
-                batch.append(inp_data)
-            except:
-                print("Error in json_str: ", json_str)
+                if type == "info":
+                    continue
+                batch[type].append(inp_data)
+                # progress_bar.update(1)
+            except Exception as exc:
+                import traceback
+                traceback.print_exc()
+                print(f"Error {exc} {id=}")
                 continue
 
-            if len(batch) >= batch_size:
-                collection.insert_many(batch)
-                batch = []
-                
-            # res = collection.insert_one(inp_data)
-            # progress_bar.update(batch_size)
+            if len(batch[type]) >= batch_size:
+                entry_collections[type].insert_many(batch[type])
+                batch[type] = []
 
-    progress_bar.close()
+        # Insert any remaining data
+        for entry_type in batch:
+            entry_collections[entry_type].insert_many(batch[entry_type])
+            batch[entry_type] = []
+
+    # progress_bar.close()
 
 if __name__ == "__main__":
     main()
