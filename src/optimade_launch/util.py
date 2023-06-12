@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from contextlib import contextmanager
+import docker
 from threading import Event, Thread, Timer
 from typing import Any, AsyncGenerator, Generator, Iterable, Optional, Union
 
@@ -44,3 +45,15 @@ def spinner(
     finally:
         stop.set()
         timed_spinner.join()
+        
+def get_docker_client(*args, **kwargs) -> docker.client.DockerClient:
+    try:
+        with spinner("Connecting to docker host...", delay=0.2):
+            return docker.from_env(*args, **kwargs)
+    except docker.errors.DockerException as error:
+        click.secho(
+            "\n".join(wrap(MSG_UNABLE_TO_COMMUNICATE_WITH_CLIENT)),
+            fg="yellow",
+            err=True,
+        )
+        raise click.ClickException(f"Failed to communicate with Docker client: {error}")

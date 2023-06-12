@@ -17,6 +17,7 @@ dependencies = [
     "click~=8.0.1",
     "click-spinner~=0.1.0",
     "docker~=5.0.2",
+    "toml~=0.10.2",
 ]
 
 [project.scripts]

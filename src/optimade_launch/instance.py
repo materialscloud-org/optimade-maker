@@ -9,6 +9,7 @@ from docker.models.containers import Container
 from typing import Any, AsyncGenerator, Generator
 
 from .core import LOGGER
+from .profile import Profile
 
 def _get_host_ports(container: Container) -> Generator[int, None, None]:
     try:
@@ -93,6 +94,7 @@ class OptimadeInstance:
         self._container = self.client.containers.create(
             image=(self.image or self.pull()),
             name=self.profile.container_name(),
+            environment=self.profile.environment(),
             ports={"5000/tcp": self.profile.port},
         )
         return self._container
