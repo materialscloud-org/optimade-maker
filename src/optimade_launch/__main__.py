@@ -66,6 +66,8 @@ def cli(app_state: ApplicationState, verbose: int):
     if verbose == 0:
         sys.excepthook = exception_handler
         
+    LOGGER.info(f"Using config file: {app_state.config_path}")
+        
 async def _async_start(
     app_state, profile, restart: bool = False, force: bool = False, timeout: None | int = None, **kwargs,
 ):
