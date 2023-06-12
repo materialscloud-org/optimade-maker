@@ -15,3 +15,6 @@ dynamic = ["version", "description"]
 dependencies = [
     "optimade[server]~=0.24.0",
 ]
+
+[project.scripts]
+optimade-launch = "optimade_launch.__main__:cli"
