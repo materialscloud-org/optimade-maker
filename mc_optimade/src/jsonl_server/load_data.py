@@ -24,12 +24,16 @@ def main():
     with open(Path(__file__).parent.joinpath(jsonl_file)) as handle:
         batch = []
         for json_str in handle:  
-            id = bson.json_util.loads(json_str)['id']
-            inp_data = bson.json_util.loads(json_str)['attributes']
-            inp_data['id'] = id
-            progress_bar.update(1)
-            # Append the data to the batch
-            batch.append(inp_data)
+            try:
+                id = bson.json_util.loads(json_str)['id']
+                inp_data = bson.json_util.loads(json_str)['attributes']
+                inp_data['id'] = id
+                progress_bar.update(1)
+                # Append the data to the batch
+                batch.append(inp_data)
+            except:
+                print("Error in json_str: ", json_str)
+                continue
 
             if len(batch) >= batch_size:
                 collection.insert_many(batch)
