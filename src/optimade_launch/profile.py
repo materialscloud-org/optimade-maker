@@ -22,7 +22,7 @@ def _default_port() -> int:
 def _get_configured_host_port(container: Container) -> int | None:
     try:
         host_config = container.attrs["HostConfig"]
-        return int(host_config["PortBindings"]["8888/tcp"][0]["HostPort"]) or None
+        return int(host_config["PortBindings"]["8081/tcp"][0]["HostPort"]) or None
     except (KeyError, IndexError, ValueError):
         pass
     return None

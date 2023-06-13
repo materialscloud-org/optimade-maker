@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum, auto
 import asyncio
+from time import time
 
 import docker 
 from docker.models.containers import Container
@@ -14,7 +15,7 @@ from .profile import Profile
 def _get_host_ports(container: Container) -> Generator[int, None, None]:
     try:
         ports = container.attrs["NetworkSettings"]["Ports"]
-        yield from (int(i["HostPort"]) for i in ports["8888/tcp"])
+        yield from (int(i["HostPort"]) for i in ports["5000/tcp"])
     except KeyError:
         pass
 
@@ -46,6 +47,7 @@ class OptimadeInstance:
     profile: Profile
     _image: docker.models.images.Image = None
     _container: Container = None
+    _protocol: str = "http"
     
     def _get_image(self) -> docker.models.images.Image | None:
         try:
@@ -106,7 +108,7 @@ class OptimadeInstance:
         self.create()
         
     def start(self) -> None:
-        self._ensure_home_mount_exists()
+        # TODO: check mongodb can be connected to
         LOGGER.info(f"Starting container '{self.profile.container_name()}'...")
         (self.container or self.create()).start()
         assert self.container is not None
@@ -128,7 +130,7 @@ class OptimadeInstance:
         self.container.restart()
         self._run_post_start()
         
-    def _run_data_inject(self) -> None:
+    def _run_post_start(self) -> None:
         assert self.container is not None
         LOGGER.debug(f"Running data inject for container: {self.container.name} ({self.container.id}).")
         
@@ -187,6 +189,17 @@ class OptimadeInstance:
             elif self.container and self.container.status == "exited":
                 return self.OptimadeInstanceStatus.EXITED
         return self.OptimadeInstanceStatus.DOWN
+    
+    async def wait_for_services(self) -> None:
+        container = self._requires_container()
+        LOGGER.info(f"Waiting for services to come up ({container.id})...")
+        start = time()
+        _ = await asyncio.gather(
+            self._host_port_assigned(container),
+        )
+        LOGGER.info(
+            f"Services came up after {time() - start:.1f} seconds ({container.id})."
+        )
 
     def url(self) -> str:
         self._requires_container()
@@ -195,7 +208,7 @@ class OptimadeInstance:
         host_ports = list(_get_host_ports(self.container))
         if len(host_ports) > 0:
             return (
-                f"{self._protocol}://localhost:{host_ports[0]}"
+                f"{self._protocol}://localhost:{host_ports[0]}/"
             )
         else:
             raise NoHostPortAssigned(self.container.id)
