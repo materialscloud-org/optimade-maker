@@ -12,7 +12,7 @@ CONTAINER_PREFIX = "optimade"
 
 DEFAULT_PORT = 8081
 DEFAULT_IMAGE = "ghcr.io/materials-consortia/optimade:0.24.0"
-DEFAULT_MONOGO_URL = "mongodb://127.0.0.1:27017"
+DEFAULT_MONGO_URI = "mongodb://127.0.0.1:27017"
 
 DEFAULT_NAME = "default"
 
@@ -32,7 +32,7 @@ class Profile:
     name: str = DEFAULT_NAME
     port: int | None = field(default_factory=_default_port)
     image: str = DEFAULT_IMAGE
-    mongo_url: str = DEFAULT_MONOGO_URL
+    mongo_uri: str = DEFAULT_MONGO_URI
     db_name: str = "optimade"
     
     def __post_init__(self):
@@ -49,7 +49,7 @@ class Profile:
             "OPTIMADE_CONFIG_FILE": None,
             "optimade_insert_test_data": False,
             "optimade_database_backend": "mongodb",
-            "optimade_mongo_url": self.mongo_url,
+            "optimade_mongo_uri": self.mongo_uri,
             "optimade_mongo_database": self.db_name,
             "optimade_structures_collection": "structures",
             "optimade_page_limit": 25,
