@@ -112,6 +112,15 @@ class OptimadeInstance:
         assert self.container is not None
         LOGGER.info(f"Started container: {self.container.name} ({self.container.id}).")
         self._run_post_start()
+        
+    def stop(self, timeout: float | None = None) -> None:
+        self._requires_container()
+        assert self.container is not None
+        
+        try:
+            self.container.stop(timeout=timeout)
+        except AttributeError:
+            raise RuntimeError("no container.")
 
     def restart(self) -> None:
         self._requires_container()

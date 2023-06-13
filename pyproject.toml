@@ -20,6 +20,12 @@ dependencies = [
     "toml~=0.10.2",
 ]
 
+[project.optional-dependencies]
+tests = [
+    "pytest~=7.0.1",
+    "pytest-asyncio==0.20.3",
+]
+
 [project.scripts]
 optimade-launch = "optimade_launch.__main__:cli"
 
