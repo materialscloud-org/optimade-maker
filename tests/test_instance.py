@@ -40,10 +40,10 @@ def test_instance_url_before_start(instance):
         instance.url()
         
 # start a instance and test real actions
-@pytest.mark.asyncio
 @pytest.mark.usefixtures("started_instance")
 class TestsAgainstStartedInstance:
     
+    @pytest.mark.asyncio
     async def test_instance_status(self, started_instance):
         assert (
             await started_instance.status()

@@ -10,6 +10,8 @@ from .core import LOGGER
 from .util import spinner
 from .instance import OptimadeInstance
 from .application_state import ApplicationState
+from .profile import DEFAULT_PORT, Profile
+from .version import __version__
 
 LOGGING_LEVELS = {
     0: logging.ERROR,
@@ -67,6 +69,12 @@ def cli(app_state: ApplicationState, verbose: int):
         sys.excepthook = exception_handler
         
     LOGGER.info(f"Using config file: {app_state.config_path}")
+    
+    
+@cli.command()
+def version():
+    """Show the version of optimade-launch."""
+    click.echo(click.style(f"Optimade Launch {__version__}", bold=True))
         
 async def _async_start(
     app_state, profile, restart: bool = False, force: bool = False, timeout: None | int = None, **kwargs,
@@ -165,3 +173,149 @@ async def _async_start(
 @with_profile
 def start(*args, **kwargs):
     asyncio.run(_async_start(*args, **kwargs))
+    
+@cli.group()
+def profile():
+    """Manage Optimade profiles."""
+    pass
+
+@profile.command("list")
+@pass_app_state
+def list_profiles(app_state):
+    """List all configured Optimade profiles.
+
+    The default profile is shown in bold.
+    """
+    default_profile = app_state.config.default_profile
+    click.echo(
+        "\n".join(
+            [
+                click.style(
+                    profile.name + (" *" if profile.name == default_profile else ""),
+                    bold=profile.name == default_profile,
+                )
+                for profile in app_state.config.profiles
+            ]
+        )
+    )
+    
+@profile.command("show")
+@click.argument("profile")
+@pass_app_state
+def show_profile(app_state, profile):
+    """Show an Optimade profile configuration."""
+    click.echo(app_state.config.get_profile(profile).dumps(), nl=False)
+    
+@profile.command("set-default")
+@click.argument("profile", type=click.STRING)
+@pass_app_state
+def set_default_profile(app_state, profile):
+    """Set an Optimade profile as default."""
+    try:
+        app_state.config.get_profile(profile)
+    except ValueError:
+        raise click.ClickException(f"A profile with name '{profile}' does not exist.")
+    else:
+        app_state.config.default_profile = profile
+        app_state.save_config()
+        click.echo(f"Set default profile to '{profile}'.")
+        
+@profile.command("edit")
+@click.argument("profile")
+@pass_app_state
+def edit_profile(app_state, profile):
+    """Edit an Optimade profile configuration."""
+    current_profile = app_state.config.get_profile(profile)
+    profile_edit = click.edit(current_profile.dumps(), extension=".toml")
+    if profile_edit:
+        new_profile = Profile.loads(profile, profile_edit)
+        if new_profile != current_profile:
+            app_state.config.profiles.remove(current_profile)
+            app_state.config.profiles.append(new_profile)
+            app_state.save_config()
+            return
+    click.echo("No changes.")
+
+        
+@profile.command("add")
+@click.argument("profile", type=click.STRING)
+@click.option(
+    "--port",
+    type=click.IntRange(min=1, max=65535),
+    help=(
+        "Specify port on which this instance will be exposed. The default port "
+        "is chosen such that it does not conflict with any currently configured "
+        "profiles."
+    ),
+)
+# @click.option(
+#     "--mongodb-url", 
+#     type=click.STRING, 
+#     help="URL to the MongoDB instance to use.",
+# )
+# @click.option(
+#     "--jsonl-source", 
+#     type=click.Path(exists=True), 
+#     help="Path to a JSON Lines file as the source of database.",
+# )
+@pass_app_state
+@click.pass_context
+def add_profile(ctx, app_state, port, profile):
+    """Add a new Optimade profile to the configuration."""
+    try:
+        app_state.config.get_profile(profile)
+    except ValueError:
+        pass
+    else:
+        raise click.ClickException(f"Profile with name '{profile}' already exists.")
+
+    # Determine next available port or use the one provided by the user.
+    configured_ports = [prof.port for prof in app_state.config.profiles if prof.port]
+    port = port or (max(configured_ports, default=-1) + 1) or DEFAULT_PORT
+
+    try:
+        new_profile = Profile(
+            name=profile,
+            port=port,
+        )
+    except ValueError as error:  # invalid profile name
+        raise click.ClickException(error)
+
+    app_state.config.profiles.append(new_profile)
+    app_state.save_config()
+    click.echo(f"Added profile '{profile}'.")
+    if click.confirm("Do you want to edit it now?", default=True):
+        ctx.invoke(edit_profile, profile=profile)
+        
+@profile.command("remove")
+@click.argument("profile")
+@click.option("--yes", is_flag=True, help="Do not ask for confirmation.")
+@click.option("-f", "--force", is_flag=True, help="Proceed, ignoring any warnings.")
+@pass_app_state
+def remove_profile(app_state, profile, yes, force):
+    """Remove an Optimade profile from the configuration."""
+    try:
+        profile = app_state.config.get_profile(profile)
+    except ValueError:
+        raise click.ClickException(f"Profile with name '{profile}' does not exist.")
+    else:
+        if not force:
+            instance = OptimadeInstance(client=app_state.docker_client, profile=profile)
+            status = asyncio.run(instance.status())
+            if status not in (
+                instance.OptimadeInstanceStatus.DOWN,
+                instance.OptimadeInstanceStatus.CREATED,
+                instance.OptimadeInstanceStatus.EXITED,
+            ):
+                raise click.ClickException(
+                    f"The instance associated with profile '{profile.name}' "
+                    "is still running. Use the -f/--force option to remove the "
+                    "profile anyways."
+                )
+
+        if yes or click.confirm(
+            f"Are you sure you want to remove profile '{profile.name}'?"
+        ):
+            app_state.config.profiles.remove(profile)
+            app_state.save_config()
+            click.echo(f"Removed profile with name '{profile.name}'.")
