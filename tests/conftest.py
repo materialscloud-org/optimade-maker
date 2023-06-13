@@ -2,6 +2,7 @@ import pytest
 
 import docker
 import sys
+from functools import partial
 
 from optimade_launch.profile import Profile
 from optimade_launch.config import Config
@@ -33,6 +34,7 @@ def instance(docker_client, profile):
     
     for op in (
         instance.stop,
+        partial(instance.remove, data=True),
         remove_db_volume,
     ):
         try:

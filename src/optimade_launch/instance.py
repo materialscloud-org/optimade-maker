@@ -140,8 +140,10 @@ class OptimadeInstance:
             self.container.remove()
             self._container = None
             
-        # Remove data collection of injected to mongodb
-        # TODO
+        # TODO: Remove data collection of injected to mongodb
+        # if data and self.profile.mongo_mount:
+        #     # Remove mongodb mount volume
+            
         
         
     def logs(
