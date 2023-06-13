@@ -93,13 +93,13 @@ async def _async_start(
         )
         
     try:
-        InstanceStatus = instance.InstanceStatus
-        status = await instance.get_status()
+        OptimadeInstanceStatus = instance.OptimadeInstanceStatus
+        status = await instance.status()
         
         if status in (
-            InstanceStatus.DOWN,
-            InstanceStatus.CREATED,
-            InstanceStatus.EXITED,
+            OptimadeInstanceStatus.DOWN,
+            OptimadeInstanceStatus.CREATED,
+            OptimadeInstanceStatus.EXITED,
         ):
             with spinner("Starting container..."):
                 instance.start()
@@ -125,7 +125,7 @@ async def _async_start(
                 with spinner("Waiting for OPTIMADE to be ready..."):
                     if logging_level == logging.DEBUG:
                         echo_logs = asyncio.create_task(instance.echo_logs())
-                    await asyncio.wait_for(instance.wait_for_ready(), timeout=timeout)
+                    await asyncio.wait_for(instance.wait_for_services(), timeout=timeout)
             except asyncio.TimeoutError:
                 raise click.ClickException(
                     f"OPTIMADE instance failed to start within {timeout} seconds."
@@ -143,8 +143,8 @@ async def _async_start(
                     echo_logs.cancel()
                     
             LOGGER.debug("Preparing connection information...")
-            url = instance.get_url()
-            host_port = instance.get_host_port()
+            url = instance.url()
+            host_port = instance.host_ports()
             
             click.secho(f"OPTIMADE instance is ready at {url}:{host_port}", fg="green")
             
@@ -172,6 +172,7 @@ async def _async_start(
 @pass_app_state
 @with_profile
 def start(*args, **kwargs):
+    """Start an OPTIMADE instance on this host."""
     asyncio.run(_async_start(*args, **kwargs))
     
 @cli.group()

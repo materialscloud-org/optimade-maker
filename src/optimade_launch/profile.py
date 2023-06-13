@@ -12,7 +12,7 @@ CONTAINER_PREFIX = "optimade"
 
 DEFAULT_PORT = 8081
 DEFAULT_IMAGE = "ghcr.io/materials-consortia/optimade:0.24.0"
-DEFAULT_MONOGO_URL = "mongodb://localhost:27017"
+DEFAULT_MONOGO_URL = "mongodb://127.0.0.1:27017"
 
 DEFAULT_NAME = "default"
 
@@ -46,6 +46,17 @@ class Profile:
         """Return the environment variables for start the container.
         """
         return {
+            "OPTIMADE_CONFIG_FILE": None,
+            "optimade_insert_test_data": False,
+            "optimade_database_backend": "mongodb",
+            "optimade_mongo_url": self.mongo_url,
+            "optimade_mongo_database": self.db_name,
+            "optimade_structures_collection": "structures",
+            "optimade_page_limit": 25,
+            "optimade_page_limit_max": 100,
+            "optimade_base_url": "http://localhost:8082", # ??
+            "optimade_index_base_url": "http://localhost:8080", # ??
+            "optimade_provider": "{\"prefix\":\"myorg\",\"name\":\"Materials Cloud Archive\",\"description\":\"Short description for My Organization\",\"homepage\":\"https://example.org\"}",
         }
         
     def dumps(self) -> str:
