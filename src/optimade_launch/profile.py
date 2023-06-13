@@ -14,6 +14,8 @@ DEFAULT_PORT = 8081
 DEFAULT_IMAGE = "ghcr.io/materials-consortia/optimade:0.24.0"
 DEFAULT_MONOGO_URL = "mongodb://localhost:27017"
 
+DEFAULT_NAME = "default"
+
 def _default_port() -> int:
     return DEFAULT_PORT
 
@@ -27,7 +29,7 @@ def _get_configured_host_port(container: Container) -> int | None:
 
 @dataclass
 class Profile:
-    name: str
+    name: str = DEFAULT_NAME
     port: int | None = field(default_factory=_default_port)
     image: str = DEFAULT_IMAGE
     mongo_url: str = DEFAULT_MONOGO_URL
@@ -51,3 +53,7 @@ class Profile:
         """
         return toml.dumps({k: v for k, v in asdict(self).items() if k != "name"})
 
+    @classmethod
+    def loads(cls, name: str, s: str) -> Profile:
+        params = toml.loads(s)
+        return cls(name=name, **params)
