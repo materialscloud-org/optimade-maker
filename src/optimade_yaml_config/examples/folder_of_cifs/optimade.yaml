@@ -1,12 +1,31 @@
-entries:
-  - entry_type: structures
-    entry_locations:
-    - 'cifs/*.cif'
-    property_locations:
-    - 'data.csv'
-    - 'data2.csv'
-  - entry_type: references
-    entry_locations:
-    - 'refs.bib'
 database_description: >-
   This database contains some example CIFs.
+
+data_paths:
+  - structures.zip
+  - data.tar.gz
+
+entries:
+  - entry_type: structures
+    entry_paths:
+    - zipped_data/cifs/*.cif
+    property_paths:
+    - gzipped_data/data.csv
+    - gzipped_data/data2.csv
+    property_definitions:
+    - name: energy
+      title: Total energy per atom
+      description: The total energy per atom as computed by DFT
+      unit: eV/atom
+      type: float
+    - name: property_b
+      title: Property B
+      description: Alias for some more complicated property_b
+      maps_to: https://schemas.optimade.org/v1.1/dft/dft_hull_distance
+    - name: description
+      title: Entry description
+      description: Provides a human-readable description for this particular entry_type
+      type: str
+  - entry_type: references
+    entry_paths:
+    - refs.bib
