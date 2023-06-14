@@ -126,11 +126,12 @@ class OptimadeInstance:
         
         client.drop_database(self.profile.db_name)
             
-    def create(self) -> Container:
+    def create(self, data: bool = False) -> Container:
         """Create a container instance from profile.
         """
         # Inject data to mongodb
-        self._inject_data()
+        if data:
+            self._inject_data()
         
         # Create container
         assert self._container is None
@@ -199,8 +200,7 @@ class OptimadeInstance:
         self.container.reload()
         return list(_get_host_ports(self.container))
     
-    @staticmethod
-    async def _host_port_assigned(container: Container) -> None:
+    async def _host_port_assigned(self, container: Container) -> None:
         LOGGER.debug("Waiting for host port to be assigned...")
         while True:
             container.reload()
@@ -228,12 +228,54 @@ class OptimadeInstance:
                 return self.OptimadeInstanceStatus.EXITED
         return self.OptimadeInstanceStatus.DOWN
     
+    async def _web_service_online(self, container: Container) -> str:
+        import subprocess
+        import functools
+        loop = asyncio.get_event_loop()
+        LOGGER.info("Waiting for web service to become reachable...")
+        assumed_protocol = "http"
+        port = self.profile.port
+        while True:
+            try:
+                LOGGER.debug("Curl web...")
+                partial_func = functools.partial(
+                    subprocess.run, 
+                    f"curl --fail-early --fail --silent --max-time 1.0 {assumed_protocol}://localhost:{port}/v1/info",
+                    shell=True, text=True, capture_output=True,
+                )
+                result = await loop.run_in_executor(
+                    None,
+                    partial_func,
+                )
+                if result.returncode == 0:
+                    LOGGER.info("web service reachable.")
+                    return assumed_protocol
+                elif result.returncode in (7, 28, 52):
+                    await asyncio.sleep(2)  # optmidae not yet reachable
+                    continue
+                elif result.returncode == 56 and assumed_protocol == "http":
+                    assumed_protocol = "https"
+                    LOGGER.info("Trying to connect via HTTPS.")
+                    continue
+                elif result.returncode == 60:
+                    LOGGER.info("web service reachable.")
+                    LOGGER.warning("Could not authenticate HTTPS certificate.")
+                    return assumed_protocol
+                else:
+                    raise FailedToWaitForServices(f"Failed to reach web service ({result.exit_code}).")
+            except docker.errors.APIError:
+                LOGGER.error("Failed to reach web service. Aborting.")
+                raise FailedToWaitForServices(
+                    "Failed to reach web service (unable to reach container."
+                )
+    
     async def wait_for_services(self) -> None:
         container = self._requires_container()
         LOGGER.info(f"Waiting for services to come up ({container.id})...")
         start = time()
         _ = await asyncio.gather(
             self._host_port_assigned(container),
+            self._web_service_online(container),
         )
         LOGGER.info(
             f"Services came up after {time() - start:.1f} seconds ({container.id})."
