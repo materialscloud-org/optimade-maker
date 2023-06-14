@@ -14,4 +14,21 @@ dynamic = ["version", "description"]
 
 dependencies = [
     "optimade[server]~=0.24.0",
+    "click~=8.0.1",
+    "click-spinner~=0.1.0",
+    "docker~=5.0.2",
+    "toml~=0.10.2",
+    "pymongo~=4.3.0",
 ]
+
+[project.optional-dependencies]
+tests = [
+    "pytest~=7.0.1",
+    "pytest-asyncio==0.20.3",
+]
+
+[project.scripts]
+optimade-launch = "optimade_launch.__main__:cli"
+
+[tool.flit.module]
+name = 'optimade_launch'
