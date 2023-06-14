@@ -95,27 +95,44 @@ class OptimadeInstance:
             LOGGER.warning(f"Unable to pull image: {self.profile.image}")
             return None
         
-    def create(self) -> Container:
-        """Create a container instance from profile.
-        Inject the data to the mongodb.
-        """
+    def _mongo_check(self) -> pymongo.MongoClient:
         # check mongodb can be connected to
         # mongo_client = pymongo.MongoClient(self.profile.mongo_uri, serverSelectionTimeoutMS=500)
         mongo_uri = f"{self.profile.mongo_uri}/?serverSelectionTimeoutMS=500"
-        mongo_client = pymongo.MongoClient(mongo_uri)
+        client = pymongo.MongoClient(mongo_uri)
         try:
             # Wait for the connection to be established within a timeout of 5 seconds
-            mongo_client.server_info()
+            client.server_info()
             LOGGER.info("Connected to MongoDB is ready.")
         except ServerSelectionTimeoutError:
             LOGGER.info("Connection timeout occurred. Connection is not ready.")
             raise
         else:
-            # Inject data to mongodb
-            for jsonl_path in self.profile.jsonl_paths:
-                inject_data(mongo_client, jsonl_path, self.profile.db_name)
-                print("Data injected to MongoDB.")
+            return client
         
+    def _inject_data(self) -> None:
+        """Inject data to mongodb."""
+        # check mongodb can be connected to
+        client = self._mongo_check()
+        
+        # Inject data to mongodb
+        for jsonl_path in self.profile.jsonl_paths:
+            inject_data(client, jsonl_path, self.profile.db_name)
+            LOGGER.info(f"Injected data from {jsonl_path} to MongoDB.")
+                
+    def _remove_data(self) -> None:
+        """remove the database."""
+        client = self._mongo_check()
+        
+        client.drop_database(self.profile.db_name)
+            
+    def create(self) -> Container:
+        """Create a container instance from profile.
+        """
+        # Inject data to mongodb
+        self._inject_data()
+        
+        # Create container
         assert self._container is None
         self._container = self.client.containers.create(
             image=(self.image or self.pull()),
@@ -156,9 +173,8 @@ class OptimadeInstance:
         
     def _run_post_start(self) -> None:
         assert self.container is not None
-        LOGGER.debug(f"Running data inject for container: {self.container.name} ({self.container.id}).")
-        
-        # TODO run script to inject data to mongodb
+
+        # Do someting?
         
     def remove(self, data: bool = False) -> None:
         # Remove contanier
@@ -166,11 +182,9 @@ class OptimadeInstance:
             self.container.remove()
             self._container = None
             
-        # TODO: Remove data collection of injected to mongodb
-        # if data and self.profile.mongo_mount:
-        #     # Remove mongodb mount volume
-            
-        
+        if data:
+            # Remove data from mongodb
+            self._remove_data()
         
     def logs(
         self, stream: bool = False, follow: bool = False

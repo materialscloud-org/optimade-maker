@@ -2,6 +2,7 @@ import pytest
 import pytest_asyncio
 
 import asyncio
+from pathlib import Path
 
 import docker
 import sys
@@ -11,6 +12,8 @@ from typing import Iterator
 from optimade_launch.profile import Profile
 from optimade_launch.config import Config
 from optimade_launch.instance import OptimadeInstance, RequiresContainerInstance
+
+static_dir = Path(__file__).parent / "_static"
 
 # Redefine event_loop fixture to be session-scoped.
 # See: https://github.com/pytest-dev/pytest-asyncio#async-fixtures
@@ -30,7 +33,7 @@ def docker_client():
 
 @pytest.fixture(scope="class")
 def profile(config):
-    return Profile(port=8981, jsonl_paths=["../../tests/_static/optimade.jsonl"])
+    return Profile(port=8981, jsonl_paths=[str(static_dir / "optimade.jsonl")])
 
 @pytest.fixture(scope="class")
 def config():
