@@ -32,6 +32,7 @@ class Profile:
     name: str = DEFAULT_NAME
     port: int | None = field(default_factory=_default_port)
     image: str = DEFAULT_IMAGE
+    jsonl_paths: list[str] = field(default_factory=lambda: [])
     mongo_uri: str = DEFAULT_MONGO_URI
     db_name: str = "optimade"
     

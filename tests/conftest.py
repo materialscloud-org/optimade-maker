@@ -30,7 +30,7 @@ def docker_client():
 
 @pytest.fixture(scope="class")
 def profile(config):
-    return Profile()
+    return Profile(port=8981, jsonl_paths=["../../tests/_static/optimade.jsonl"])
 
 @pytest.fixture(scope="class")
 def config():
