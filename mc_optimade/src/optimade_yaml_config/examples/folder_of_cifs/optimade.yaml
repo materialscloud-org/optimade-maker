@@ -1,0 +1,12 @@
+entries:
+  - entry_type: structures
+    entry_locations:
+    - 'cifs/*.cif'
+    property_locations:
+    - 'data.csv'
+    - 'data2.csv'
+  - entry_type: references
+    entry_locations:
+    - 'refs.bib'
+database_description: >-
+  This database contains some example CIFs.
