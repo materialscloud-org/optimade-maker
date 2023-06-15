@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum, auto
 import asyncio
+import sys
 from time import time
 
 import docker 
@@ -141,6 +142,9 @@ class OptimadeInstance:
             environment=self.profile.environment(),
             ports={"5000/tcp": self.profile.port},
         )
+        
+        if ("localhost" in self.profile.mongo_uri or "127.0.0.1" in self.profile.mongo_uri) and sys.platform == "linux":
+            self._container.update({"network_mode": "host"})
         return self._container
     
     def recreate(self) -> None:
