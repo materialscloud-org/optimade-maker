@@ -10,8 +10,8 @@ entries:
     entry_paths:
     - structures/cifs/*.cif
     property_paths:
-    - gzipped_data/data.csv
-    - gzipped_data/data2.csv
+    - data/data.csv
+    - data/data2.csv
     property_definitions:
     - name: energy
       title: Total energy per atom
