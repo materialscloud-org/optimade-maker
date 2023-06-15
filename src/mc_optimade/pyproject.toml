@@ -1,0 +1,9 @@
+[project]
+name = "mc_optimade"
+version = "0.1"
+
+dependencies = [
+    "pydantic",
+    "optimade",
+    "pyyaml"
+]
