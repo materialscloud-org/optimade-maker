@@ -249,19 +249,25 @@ def edit_profile(app_state, profile):
         "profiles."
     ),
 )
-# @click.option(
-#     "--mongodb-uri", 
-#     type=click.STRING, 
-#     help="URL to the MongoDB instance to use.",
-# )
-# @click.option(
-#     "--jsonl-source", 
-#     type=click.Path(exists=True), 
-#     help="Path to a JSON Lines file as the source of database.",
-# )
+@click.option(
+    "--mongo-uri", 
+    type=click.STRING, 
+    help="URL to the MongoDB instance to use.",
+)
+@click.option(
+    "--jsonl", 
+    type=click.Path(exists=True), 
+    multiple=True,
+    help="Path to a JSON Lines file as the source of database.",
+)
+@click.option(
+    "--db-name",
+    type=click.STRING,
+    help="Name of the database to use.",
+)
 @pass_app_state
 @click.pass_context
-def create_profile(ctx, app_state, port, profile):
+def create_profile(ctx, app_state, port: int, mongo_uri: str, jsonl: list, db_name, profile: str):
     """Add a new Optimade profile to the configuration."""
     try:
         app_state.config.get_profile(profile)
@@ -278,6 +284,9 @@ def create_profile(ctx, app_state, port, profile):
         new_profile = Profile(
             name=profile,
             port=port,
+            mongo_uri=mongo_uri,
+            jsonl_paths=jsonl,
+            db_name=db_name,
         )
     except ValueError as error:  # invalid profile name
         raise click.ClickException(error)

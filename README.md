@@ -20,7 +20,7 @@ To use OPTIMADE launch you will have to
 3. creating a profile and attach a database from inject data from JSONL file
 
    ```console
-   optimade-launch profile create --profile-name test --jsonl-file /path/to/your/jsonl/file
+   optimade-launch profile create --profile-name test --jsonl /path/to/your/jsonl/file
    ```
 
 4. Start OPTIMADE server of testing data with
@@ -82,7 +82,10 @@ JSONL files are stored in the ``/var/lib/optimade-archive`` directory.
 Once a new JSONL file is found in the directory, the server is started with the new data.
 
 ```console
-optimade-launch profile create --name <??parsed_doi> --jsonl-file /var/lib/optimade-archive/<parsed_doi>.jsonl --mongo-uri mongodb://localhost:27017
+optimade-launch profile create --name <??parsed_doi> --jsonl /var/lib/optimade-archive/<parsed_doi>.jsonl --mongo-uri mongodb://localhost:27017 --db-name <??parsed_doi>
+```
+
+```console
 optimade-launch server start -p <??parsed_doi>
 ```
 
