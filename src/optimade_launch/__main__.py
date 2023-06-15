@@ -238,7 +238,7 @@ def edit_profile(app_state, profile):
     click.echo("No changes.")
 
         
-@profile.command("add")
+@profile.command("create")
 @click.argument("profile", type=click.STRING)
 @click.option(
     "--port",
@@ -250,7 +250,7 @@ def edit_profile(app_state, profile):
     ),
 )
 # @click.option(
-#     "--mongodb-url", 
+#     "--mongodb-uri", 
 #     type=click.STRING, 
 #     help="URL to the MongoDB instance to use.",
 # )
@@ -261,7 +261,7 @@ def edit_profile(app_state, profile):
 # )
 @pass_app_state
 @click.pass_context
-def add_profile(ctx, app_state, port, profile):
+def create_profile(ctx, app_state, port, profile):
     """Add a new Optimade profile to the configuration."""
     try:
         app_state.config.get_profile(profile)
@@ -284,7 +284,7 @@ def add_profile(ctx, app_state, port, profile):
 
     app_state.config.profiles.append(new_profile)
     app_state.save_config()
-    click.echo(f"Added profile '{profile}'.")
+    click.echo(f"Created profile '{profile}'.")
     if click.confirm("Do you want to edit it now?", default=True):
         ctx.invoke(edit_profile, profile=profile)
         

@@ -37,15 +37,15 @@ def test_change_default_profile():
     assert result.exit_code == 1
     assert "does not exist" in result.output
     
-def test_add_remove_profile():
+def test_create_remove_profile():
     runner: CliRunner = CliRunner()
 
-    # Add new-profile
+    # Create new-profile
     result: Result = runner.invoke(
-        cli.cli, ["profile", "add", "new-profile"], input="n\n"
+        cli.cli, ["profile", "create", "new-profile"], input="n\n"
     )
     assert result.exit_code == 0
-    assert "Added profile 'new-profile'." in result.output
+    assert "Created profile 'new-profile'." in result.output
 
     # Check that new-profile exists
     result: Result = runner.invoke(cli.cli, ["profile", "list"])
@@ -55,7 +55,7 @@ def test_add_remove_profile():
 
     # Try add another profile with the same name (should fail)
     result: Result = runner.invoke(
-        cli.cli, ["profile", "add", "new-profile"], input="n\n"
+        cli.cli, ["profile", "create", "new-profile"], input="n\n"
     )
     assert result.exit_code == 1
     assert "Profile with name 'new-profile' already exists." in result.output
