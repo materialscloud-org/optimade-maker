@@ -8,7 +8,7 @@ data_paths:
 entries:
   - entry_type: structures
     entry_paths:
-    - zipped_data/cifs/*.cif
+    - structures/cifs/*.cif
     property_paths:
     - gzipped_data/data.csv
     - gzipped_data/data2.csv
@@ -26,6 +26,6 @@ entries:
       title: Entry description
       description: Provides a human-readable description for this particular entry_type
       type: str
-  - entry_type: references
-    entry_paths:
-    - refs.bib
+#  - entry_type: references
+    #entry_paths:
+    #- refs.bib
