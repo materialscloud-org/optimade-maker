@@ -37,15 +37,15 @@ def test_change_default_profile():
     assert result.exit_code == 1
     assert "does not exist" in result.output
     
-def test_add_remove_profile():
+def test_create_remove_profile():
     runner: CliRunner = CliRunner()
 
-    # Add new-profile
+    # Create new-profile
     result: Result = runner.invoke(
-        cli.cli, ["profile", "add", "new-profile"], input="n\n"
+        cli.cli, ["profile", "create", "new-profile"], input="n\n"
     )
     assert result.exit_code == 0
-    assert "Added profile 'new-profile'." in result.output
+    assert "Created profile 'new-profile'." in result.output
 
     # Check that new-profile exists
     result: Result = runner.invoke(cli.cli, ["profile", "list"])
@@ -55,7 +55,7 @@ def test_add_remove_profile():
 
     # Try add another profile with the same name (should fail)
     result: Result = runner.invoke(
-        cli.cli, ["profile", "add", "new-profile"], input="n\n"
+        cli.cli, ["profile", "create", "new-profile"], input="n\n"
     )
     assert result.exit_code == 1
     assert "Profile with name 'new-profile' already exists." in result.output
@@ -83,3 +83,30 @@ def test_add_remove_profile():
     )
     assert result.exit_code == 1
     assert "Profile with name 'new-profile' does not exist." in result.output
+    
+def test_create_with_all_parameters(tmp_path_factory):
+    # Create new-profile with all valid parameters
+    runner: CliRunner = CliRunner()
+
+    tmp1 = tmp_path_factory.mktemp("tmp1.jsonl")
+    tmp2 = tmp_path_factory.mktemp("tmp2.jsonl")
+    print(tmp1)
+    print(tmp2)
+    # Create new-profile
+    result: Result = runner.invoke(
+        cli.cli, ["profile", "create", "new-profile", "--port", "8999", "--mongo-uri", "mongodb://localhost:27017", "--jsonl", str(tmp1), "--jsonl", str(tmp2), "--db-name", "optimade-test"], input="n\n"
+    )
+    assert result.exit_code == 0
+    assert "Created profile 'new-profile'." in result.output
+    
+    runner: CliRunner = CliRunner()
+    result: Result = runner.invoke(cli.cli, ["profile", "show", "new-profile"])
+    assert Profile.loads("default", result.output) == Profile(port=8999, mongo_uri="mongodb://localhost:27017", jsonl_paths=[str(tmp1), str(tmp2)], db_name="optimade-test")
+    
+    # Remove new-profile
+    result: Result = runner.invoke(
+        cli.cli, ["profile", "remove", "new-profile"], input="y\n"
+    )
+    assert result.exit_code == 0
+    result: Result = runner.invoke(cli.cli, ["profile", "list"])
+    assert "new-profile" not in result.output

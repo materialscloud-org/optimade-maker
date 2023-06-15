@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum, auto
 import asyncio
+import sys
 from time import time
 
 import docker 
@@ -95,27 +96,45 @@ class OptimadeInstance:
             LOGGER.warning(f"Unable to pull image: {self.profile.image}")
             return None
         
-    def create(self) -> Container:
-        """Create a container instance from profile.
-        Inject the data to the mongodb.
-        """
+    def _mongo_check(self) -> pymongo.MongoClient:
         # check mongodb can be connected to
         # mongo_client = pymongo.MongoClient(self.profile.mongo_uri, serverSelectionTimeoutMS=500)
         mongo_uri = f"{self.profile.mongo_uri}/?serverSelectionTimeoutMS=500"
-        mongo_client = pymongo.MongoClient(mongo_uri)
+        client = pymongo.MongoClient(mongo_uri)
         try:
             # Wait for the connection to be established within a timeout of 5 seconds
-            mongo_client.server_info()
+            client.server_info()
             LOGGER.info("Connected to MongoDB is ready.")
         except ServerSelectionTimeoutError:
             LOGGER.info("Connection timeout occurred. Connection is not ready.")
             raise
         else:
-            # Inject data to mongodb
-            for jsonl_path in self.profile.jsonl_paths:
-                inject_data(mongo_client, jsonl_path, self.profile.db_name)
-                print("Data injected to MongoDB.")
+            return client
         
+    def _inject_data(self) -> None:
+        """Inject data to mongodb."""
+        # check mongodb can be connected to
+        client = self._mongo_check()
+        
+        # Inject data to mongodb
+        for jsonl_path in self.profile.jsonl_paths:
+            inject_data(client, jsonl_path, self.profile.db_name)
+            LOGGER.info(f"Injected data from {jsonl_path} to MongoDB.")
+                
+    def _remove_data(self) -> None:
+        """remove the database."""
+        client = self._mongo_check()
+        
+        client.drop_database(self.profile.db_name)
+            
+    def create(self, data: bool = False) -> Container:
+        """Create a container instance from profile.
+        """
+        # Inject data to mongodb
+        if data:
+            self._inject_data()
+        
+        # Create container
         assert self._container is None
         self._container = self.client.containers.create(
             image=(self.image or self.pull()),
@@ -123,6 +142,9 @@ class OptimadeInstance:
             environment=self.profile.environment(),
             ports={"5000/tcp": self.profile.port},
         )
+        
+        if ("localhost" in self.profile.mongo_uri or "127.0.0.1" in self.profile.mongo_uri) and sys.platform == "linux":
+            self._container.update({"network_mode": "host"})
         return self._container
     
     def recreate(self) -> None:
@@ -134,7 +156,7 @@ class OptimadeInstance:
     def start(self) -> None:
         # TODO: check mongodb can be connected to
         LOGGER.info(f"Starting container '{self.profile.container_name()}'...")
-        (self.container or self.create()).start()
+        (self.container or self.create(data=True)).start()
         assert self.container is not None
         LOGGER.info(f"Started container: {self.container.name} ({self.container.id}).")
         self._run_post_start()
@@ -156,9 +178,8 @@ class OptimadeInstance:
         
     def _run_post_start(self) -> None:
         assert self.container is not None
-        LOGGER.debug(f"Running data inject for container: {self.container.name} ({self.container.id}).")
-        
-        # TODO run script to inject data to mongodb
+
+        # Do someting?
         
     def remove(self, data: bool = False) -> None:
         # Remove contanier
@@ -166,11 +187,9 @@ class OptimadeInstance:
             self.container.remove()
             self._container = None
             
-        # TODO: Remove data collection of injected to mongodb
-        # if data and self.profile.mongo_mount:
-        #     # Remove mongodb mount volume
-            
-        
+        if data:
+            # Remove data from mongodb
+            self._remove_data()
         
     def logs(
         self, stream: bool = False, follow: bool = False
@@ -185,8 +204,7 @@ class OptimadeInstance:
         self.container.reload()
         return list(_get_host_ports(self.container))
     
-    @staticmethod
-    async def _host_port_assigned(container: Container) -> None:
+    async def _host_port_assigned(self, container: Container) -> None:
         LOGGER.debug("Waiting for host port to be assigned...")
         while True:
             container.reload()
@@ -214,12 +232,54 @@ class OptimadeInstance:
                 return self.OptimadeInstanceStatus.EXITED
         return self.OptimadeInstanceStatus.DOWN
     
+    async def _web_service_online(self, container: Container) -> str:
+        import subprocess
+        import functools
+        loop = asyncio.get_event_loop()
+        LOGGER.info("Waiting for web service to become reachable...")
+        assumed_protocol = "http"
+        port = self.profile.port
+        while True:
+            try:
+                LOGGER.debug("Curl web...")
+                partial_func = functools.partial(
+                    subprocess.run, 
+                    f"curl --fail-early --fail --silent --max-time 1.0 {assumed_protocol}://localhost:{port}/v1/info",
+                    shell=True, text=True, capture_output=True,
+                )
+                result = await loop.run_in_executor(
+                    None,
+                    partial_func,
+                )
+                if result.returncode == 0:
+                    LOGGER.info("web service reachable.")
+                    return assumed_protocol
+                elif result.returncode in (7, 28, 52):
+                    await asyncio.sleep(2)  # optmidae not yet reachable
+                    continue
+                elif result.returncode == 56 and assumed_protocol == "http":
+                    assumed_protocol = "https"
+                    LOGGER.info("Trying to connect via HTTPS.")
+                    continue
+                elif result.returncode == 60:
+                    LOGGER.info("web service reachable.")
+                    LOGGER.warning("Could not authenticate HTTPS certificate.")
+                    return assumed_protocol
+                else:
+                    raise FailedToWaitForServices(f"Failed to reach web service ({result.exit_code}).")
+            except docker.errors.APIError:
+                LOGGER.error("Failed to reach web service. Aborting.")
+                raise FailedToWaitForServices(
+                    "Failed to reach web service (unable to reach container."
+                )
+    
     async def wait_for_services(self) -> None:
         container = self._requires_container()
         LOGGER.info(f"Waiting for services to come up ({container.id})...")
         start = time()
         _ = await asyncio.gather(
             self._host_port_assigned(container),
+            self._web_service_online(container),
         )
         LOGGER.info(
             f"Services came up after {time() - start:.1f} seconds ({container.id})."
