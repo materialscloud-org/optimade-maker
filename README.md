@@ -41,4 +41,4 @@ Authors (alphabetical):
 - Matthew Evans
 - Giovanni Pizzi
 - Jusong Yu
-- Xing Wong
+- Xing Wang
