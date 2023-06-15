@@ -2,7 +2,10 @@ import json
 from urllib.error import HTTPError, URLError
 
 import requests
-from utils import get_file_url, get_record_url, parse_optimade_config
+import tqdm
+
+from mc_optimade.archive.utils import get_file_url, get_record_url
+from mc_optimade.config import Config
 
 
 class ArchiveRecord:
@@ -25,7 +28,7 @@ class ArchiveRecord:
     def process(self):
         if not self.is_optimade_record():
             return
-        self.parse_optimade_config()
+        self.load_optimade_config()
         self.download_files()
         self.convert_to_optimade()
 
@@ -57,31 +60,32 @@ class ArchiveRecord:
 
     def is_optimade_record(self):
         """
-        Check if the record has a file called "optimade.yaml".
+        Check if the record has a file called "optimade.yaml" or "optimade.yml".
         """
-        return "optimade.yaml" in self.files
+        return "optimade.yaml" in self.files or "optimade.yml" in self.files
 
-    def parse_optimade_config(self):
+    def download_mcloud_yaml_file(self, filename):
+        """
+        Try to download the optimade.yaml/yml file.
+        """
+        url = get_file_url(self.id, filename, self.files[filename])
+        response = requests.get(url, allow_redirects=True)
+        if not response.status_code == 200:
+            raise RuntimeError("Could not download optimade.yaml/yml file.")
+        return response
+
+    def load_optimade_config(self):
         """
         Parse the optimade.yaml file.
         """
-        import yaml
+        try:
+            response = self.download_mcloud_yaml_file("optimade.yaml")
+        except RuntimeError:
+            response = self.download_mcloud_yaml_file("optimade.yml")
 
-        url = get_file_url(self.id, "optimade.yaml", self.files["optimade.yaml"])
-        response = requests.get(url, allow_redirects=True)
-        content = response.content.decode("utf-8")
-        content = yaml.safe_load(content)
-        # step 2 phase the optimade config file
-        files_to_downlaod, files_to_convert = parse_optimade_config(content)
-        files_to_downlaod.append(
-            "optimade.yaml",
-        )
-        self.optimade_config = {
-            "files_to_downlaod": files_to_downlaod,
-            "files_to_convert": files_to_convert,
-        }
+        self.mc_config = Config.from_string(response.content.decode("utf-8"))
 
-    def download_files(self):
+    def download_files(self, extract_files: bool = False):
         """
         Download all files from the optimade file list.
         """
@@ -91,19 +95,14 @@ class ArchiveRecord:
 
         # Extract and process files in record
         tmpdir = tempfile.mkdtemp(dir="/tmp/archive")
-        for file in self.optimade_config["files_to_downlaod"]:
+        for file in tqdm.tqdm(self.mc_config.data_paths, desc="Downloading data files"):
             file_url = get_file_url(self.id, file, self.files[file])
             path = download_file(file_url, tmpdir)
-            try:
-                print("\nExtracting file ", path)
-                extract(path, tmpdir)
-                print("Extracted!")
-            except ValueError as e:
-                print(e)
-                print("Try to open the file and count the structures...")
-
-    def convert_to_optimade(self):
-        """
-        Convert the structure to OPTIMADE format.
-        """
-        pass
+            if extract_files:
+                try:
+                    print("\nExtracting file ", path)
+                    extract(path, tmpdir)
+                    print("Extracted!")
+                except ValueError as e:
+                    print(e)
+                    print("Try to open the file and count the structures...")

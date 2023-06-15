@@ -85,3 +85,7 @@ class Config(BaseModel):
     def from_file(path: str):
         """Load a `optimade.yaml` file from a path, and return a `Config` instance."""
         return Config(**yaml.safe_load(open(path)))
+
+    @staticmethod
+    def from_string(data: str):
+        return Config(**yaml.safe_load(data))

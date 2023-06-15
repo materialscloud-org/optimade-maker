@@ -53,10 +53,7 @@ def get_record_url(record_id):
 
 def get_file_url(record_id, filename, checksum):
     filename = filename.replace(" ", "+")
-    print(filename)
-    return "https://archive.materialscloud.org/record/file_stats?record_id={}&checksum={}&filename={}".format(
-        record_id, checksum, filename
-    )
+    return f"https://archive.materialscloud.org/record/file_stats?record_id={record_id}&checksum={checksum}&filename={filename}"
 
 
 def get_file_urls_from_doi(record_id, max_size):
