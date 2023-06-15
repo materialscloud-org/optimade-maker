@@ -1,0 +1,46 @@
+# archive-optimade-integration
+
+Scripts and data related to the integration of the Materials Cloud Archive and OPTIMADE.
+
+## How to use optimade-launch
+
+`optimade-launch` is the cli tool to start a optimade server from `JSONL` database easily.
+
+To use OPTIMADE launch you will have to
+
+1. [Install Docker on your workstation or laptop.](https://docs.docker.com/get-docker/)
+2. Install OPTIMADE launch with [pipx](https://pypa.github.io/pipx/installation/) (**recommended**):
+
+   ```console
+   pipx install optimade-launch
+   ```
+
+   _Or directly with pip (`pip install optimade-launch`)._
+
+3. creating a profile and attach a database from inject data from JSONL file
+
+   ```console
+   optimade-launch profile create --profile-name test --jsonl-file /path/to/your/jsonl/file
+   ```
+
+4. Start OPTIMADE server of testing data with
+
+    ```console
+    optimade-launch start
+    ```
+5. Follow the instructions on screen to open OPTIMADE API in the browser.
+
+See `optimade-launch --help` for detailed help.
+
+### Instance Management
+
+You can inspect the status of all configured AiiDAlab profiles with:
+
+```console
+optimade-launch status
+```
+
+### Profile Management
+
+The tool allows to manage multiple profiles, e.g., with different home directories or ports.
+See `optimade-launch profile --help` for more information.
