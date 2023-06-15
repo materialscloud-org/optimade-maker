@@ -5,7 +5,10 @@ version = "0.1"
 dependencies = [
     "pydantic",
     "optimade",
-    "pyyaml"
+    "pyyaml",
+    "ase",
+    "pybtex",
+    "tqdm",
 ]
 
 [project.optional-dependencies]
