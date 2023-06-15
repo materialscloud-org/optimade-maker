@@ -11,14 +11,14 @@ from typing import Any, Callable, Dict, List
 import ase.io
 import pybtex.database
 import tqdm
-from optimade.adapters import Reference, Structure
+from optimade.adapters import Structure
 from optimade.models import EntryResource
 
 from .config import Config, EntryConfig
 
 
 def pybtex_to_optimade(bib_entry: Any) -> EntryResource:
-    return Reference(bib_entry)
+    raise NotImplementedError
 
 
 ENTRY_PARSERS: Dict[str, Callable[[Path], Any]] = {
