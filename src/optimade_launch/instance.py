@@ -152,7 +152,7 @@ class OptimadeInstance:
     def start(self) -> None:
         # TODO: check mongodb can be connected to
         LOGGER.info(f"Starting container '{self.profile.container_name()}'...")
-        (self.container or self.create()).start()
+        (self.container or self.create(data=True)).start()
         assert self.container is not None
         LOGGER.info(f"Started container: {self.container.name} ({self.container.id}).")
         self._run_post_start()

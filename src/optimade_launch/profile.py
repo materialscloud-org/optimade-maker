@@ -46,6 +46,11 @@ class Profile:
     def environment(self) -> dict:
         """Return the environment variables for start the container.
         """
+        if "localhost" in self.mongo_uri:
+            self.mongo_uri = self.mongo_uri.replace("localhost", "host.docker.internal")
+        if "127.0.0.1" in self.mongo_uri:
+            self.mongo_uri = self.mongo_uri.replace("127.0.0.1", "host.docker.internal")
+            
         return {
             "OPTIMADE_CONFIG_FILE": None,
             "optimade_insert_test_data": False,
@@ -55,8 +60,8 @@ class Profile:
             "optimade_structures_collection": "structures",
             "optimade_page_limit": 25,
             "optimade_page_limit_max": 100,
-            "optimade_base_url": "http://localhost:8082", # ??
-            "optimade_index_base_url": "http://localhost:8080", # ??
+            "optimade_base_url": f"http://localhost:{self.port}", # ??
+            "optimade_index_base_url": f"http://localhost:{self.port}", # ??
             "optimade_provider": "{\"prefix\":\"myorg\",\"name\":\"Materials Cloud Archive\",\"description\":\"Short description for My Organization\",\"homepage\":\"https://example.org\"}",
         }
         

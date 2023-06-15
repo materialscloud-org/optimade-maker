@@ -156,8 +156,14 @@ async def _async_start(
                 "status and `optimade-launch logs` to see the container logs.",
                 fg="green",
             )
-            
-@cli.command()
+      
+
+@cli.group()
+def server(*args, **kwargs):
+    """Manage OPTIMADE servers."""
+    pass
+
+@server.command("start")
 @click.option(
     "--timeout",
     default=120,
@@ -174,6 +180,94 @@ async def _async_start(
 def start(*args, **kwargs):
     """Start an OPTIMADE instance on this host."""
     asyncio.run(_async_start(*args, **kwargs))
+    
+@server.command("stop")
+@click.option(
+    "-r",
+    "--remove",
+    is_flag=True,
+    help="Do not only stop the container, but also remove it.",
+)
+@click.option(
+    "--clean-db",
+    is_flag=True,
+    help="Also remove the database",
+)
+@click.option(
+    "-t",
+    "--timeout",
+    type=click.INT,
+    default=20,
+    help="Wait this long for the instance to shut down.",
+)
+@pass_app_state
+@with_profile
+def stop(app_state, profile, remove: bool, clean_db: bool, timeout, **kwargs):
+    """Stop an OPTIMADE instance on this host."""
+    instance = OptimadeInstance(client=app_state.docker_client, profile=profile)
+    status = asyncio.run(instance.status())
+    if status not in (
+        instance.OptimadeInstanceStatus.DOWN,
+        instance.OptimadeInstanceStatus.CREATED,
+        instance.OptimadeInstanceStatus.EXITED,
+    ):
+        with spinner("Stopping Optimade...", final="stopped."):
+            instance.stop(timeout=timeout)
+    if remove:
+        with spinner("Removing container..."):
+            instance.remove()
+            
+    if clean_db:
+        # TODO clean db by calling the database command
+        pass
+
+    
+@cli.group()
+def database(*args, **kwargs):
+    """Manage OPTIMADE databases."""
+    pass
+
+@database.command("health-check")
+@with_profile
+def health_check():
+    """Check if the database is healthy."""
+    pass
+
+@database.command("import")
+@with_profile
+def import_database():
+    """Import a database."""
+    pass
+
+@database.command("delete")
+@with_profile
+def delete_database():
+    """Delete a database."""
+    pass
+
+@cli.group()
+@with_profile
+def container(*args, **kwargs):
+    """Manage OPTIMADE containers."""
+    pass
+
+@container.command("create")
+@with_profile
+def create_container():
+    """Create a container."""
+    pass
+
+@container.command("start")
+@with_profile
+def start_container():
+    """Start a container."""
+    pass
+
+@container.command("stop")
+@with_profile
+def stop_container():
+    """Stop a container."""
+    pass
     
 @cli.group()
 def profile():
