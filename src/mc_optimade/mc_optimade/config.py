@@ -1,27 +1,43 @@
-from typing import Optional
-import yaml
+"""This submodule describes the `optimade.yaml` config file
+that can be provided in an MCloud entry and used to indicate
+how an OPIMADE API should be constructed from the entry.
 
-from pydantic import BaseSettings, BaseModel, Field, validator, root_validator
+"""
+
+from typing import Optional
+
+import yaml
+from pydantic import BaseModel, Field, validator
+
 
 class PropertyDefinition(BaseModel):
     """A short-hand definition of a property to be served by this API.
-This is a subset of the full OPTIMADE v1.2 property definition.
+    This is a subset of the full OPTIMADE v1.2 property definition.
 
     """
-    name: str = Field(description="""The field name of the property, as provided in the included
-the auxiliary property files. 
+
+    name: str = Field(
+        description="""The field name of the property, as provided in the included
+the auxiliary property files.
 Will be served with a provider-specific prefix in the actual API, so must not start with an underscore."""
     )
 
     title: Optional[str] = Field(description="A human-readable title for the property.")
-    description: Optional[str] = Field(description="A human-readable description of the property.")
-    unit: Optional[str] = Field(description="The unit of the property, e.g. 'eV' or 'Å'.")
-    type: Optional[str] = Field(description="The OPTIMADE type of the property, e.g., `float` or `string`.")
-    mapsto: Optional[str] = Field(description="A URI/URN for a canonical definition of the property, within the OPTIMADE extended format. Where possible, this should be a versioned URI.")
+    description: Optional[str] = Field(
+        description="A human-readable description of the property."
+    )
+    unit: Optional[str] = Field(
+        description="The unit of the property, e.g. 'eV' or 'Å'."
+    )
+    type: Optional[str] = Field(
+        description="The OPTIMADE type of the property, e.g., `float` or `string`."
+    )
+    mapsto: Optional[str] = Field(
+        description="A URI/URN for a canonical definition of the property, within the OPTIMADE extended format. Where possible, this should be a versioned URI."
+    )
 
 
 class EntryConfig(BaseModel):
-
     entry_type: str = Field(
         description="The OPTIMADE entry type, e.g. `structures` or `references`."
     )
@@ -45,7 +61,7 @@ class EntryConfig(BaseModel):
             )
 
         return v
-   
+
 
 class Config(BaseModel):
     """This class describes the `optimade.yaml` file
@@ -69,4 +85,3 @@ class Config(BaseModel):
     def from_file(path: str):
         """Load a `optimade.yaml` file from a path, and return a `Config` instance."""
         return Config(**yaml.safe_load(open(path)))
-

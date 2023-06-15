@@ -10,7 +10,7 @@ dependencies = [
 
 [project.optional-dependencies]
 tests = ["pytest"]
-dev = ["black", "ruff", "pre-commit", "mypy", "isort"]
+dev = ["black", "ruff", "pre-commit", "mypy", "isort", "types-all"]
 
 [tool.ruff]
 select = ["E", "F", "I", "W", "Q"]
