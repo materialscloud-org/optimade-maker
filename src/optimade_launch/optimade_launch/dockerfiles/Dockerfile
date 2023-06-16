@@ -4,7 +4,7 @@ FROM ghcr.io/materials-consortia/optimade:0.24.0
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
-ENV SOCKET_NAME "gunicorn"
+ENV UNIX_SOCK "/tmp/gunicorn.sock"
 
 COPY run.sh /app/run.sh
 

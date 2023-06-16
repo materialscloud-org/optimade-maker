@@ -333,7 +333,7 @@ def edit_profile(app_state, profile):
 
         
 @profile.command("create")
-@click.argument("profile", type=click.STRING)
+@click.argument("profile", type=click.STRING, required=False)
 @click.option(
     "--port",
     type=click.IntRange(min=1, max=65535),
@@ -359,28 +359,44 @@ def edit_profile(app_state, profile):
     type=click.STRING,
     help="Name of the database to use.",
 )
+@click.option(
+    "--config",
+    type=click.Path(exists=True),
+    required=False,
+    help="Path to a YAML file containing the configuration.",
+)
 @pass_app_state
 @click.pass_context
-def create_profile(ctx, app_state, port: int, mongo_uri: str, jsonl: list, db_name, profile: str):
+def create_profile(ctx, app_state, port: int | None, mongo_uri: str, jsonl: list, db_name, config, profile: str | None = None):
     """Add a new Optimade profile to the configuration."""
+    if config:
+        import yaml
+        
+        with open(config) as f:
+            params = yaml.safe_load(f)
+            profile = params["name"]
+    else:
+        params = {
+            "name": profile,
+            "mongo_uri": mongo_uri,
+            "jsonl_paths": jsonl,
+            "db_name": db_name or f"optimade-{profile}",
+            "port": None,
+        }
+            
     try:
         app_state.config.get_profile(profile)
     except ValueError:
         pass
     else:
         raise click.ClickException(f"Profile with name '{profile}' already exists.")
-
-    # Determine next available port or use the one provided by the user.
-    configured_ports = [prof.port for prof in app_state.config.profiles if prof.port]
-    port = port or (max(configured_ports, default=-1) + 1) or DEFAULT_PORT
+            
+    if port:
+        params["port"] = port
 
     try:
         new_profile = Profile(
-            name=profile,
-            port=port,
-            mongo_uri=mongo_uri,
-            jsonl_paths=jsonl,
-            db_name=db_name,
+            **params,
         )
     except ValueError as error:  # invalid profile name
         raise click.ClickException(error)

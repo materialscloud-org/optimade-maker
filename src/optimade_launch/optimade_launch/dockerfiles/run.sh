@@ -15,5 +15,5 @@ gunicorn \
     --access-logfile logs/mc_optimade_access.log \
     --capture-output \
     --access-logformat "%(t)s: %(h)s %(l)s %(u)s %(r)s %(s)s %(b)s %(f)s %(a)s" \
-    -b unix:/tmp/${SOCKET_NAME}.sock \
+    -b unix:${UNIX_SOCK} \
     -b :${PORT} optimade.server.main:app

@@ -31,15 +31,20 @@ def _get_configured_host_port(container: Container) -> int | None:
 @dataclass
 class Profile:
     name: str = DEFAULT_NAME
-    port: int | None = field(default_factory=_default_port)
     image: str = DEFAULT_IMAGE
     jsonl_paths: list[str] = field(default_factory=lambda: [])
     mongo_uri: str = DEFAULT_MONGO_URI
     db_name: str = "optimade"
+    port: int | None = None
+    unix_sock: str | None = None
+    optimade_base_url: str | None = None
+    optimade_index_base_url: str | None = None
+    optimade_provider: str | None = None
     
     def __post_init__(self):
-        # TODO: Check if name is valid
-        pass
+        # default port is dependent on unix_sock
+        if self.port is None and self.unix_sock is None:
+            self.port = _default_port()
     
     def container_name(self) -> str:
         return f"{CONTAINER_PREFIX}_{self.name}"
