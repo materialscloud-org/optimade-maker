@@ -8,6 +8,7 @@ from time import time
 import subprocess
 import functools
 from contextlib import contextmanager
+from pathlib import Path
 
 import docker 
 from docker.models.containers import Container
@@ -20,6 +21,9 @@ from .core import LOGGER
 from .profile import Profile
 from .database import inject_data
 from .util import _async_wrap_iter
+
+_DOCKERFILE_PATH = Path(__file__).parent / "dockerfiles"
+_BUILD_TAG = "optimade:custom"
 
 def _get_host_ports(container: Container) -> Generator[int, None, None]:
     try:
@@ -99,6 +103,18 @@ class OptimadeInstance:
         if container is None:
             raise RequiresContainerInstance
         return container
+    
+    def build(self) -> docker.models.images.Image:
+        """Build the image from the Dockerfile."""
+        LOGGER.info(f"Building image from Dockerfile: {self.profile.dockerfile_path}")
+        image, logs = self.client.images.build(
+            path=_DOCKERFILE_PATH,
+            tag=_BUILD_TAG,
+            rm=True,
+        )
+        LOGGER.info(f"Built image: {image}")
+        LOGGER.debug(f"Build logs: {logs}")
+        return image
     
     def pull(self) -> docker.models.images.Image | None:
         try:
