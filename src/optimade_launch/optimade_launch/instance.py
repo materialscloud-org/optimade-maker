@@ -104,12 +104,13 @@ class OptimadeInstance:
             raise RequiresContainerInstance
         return container
     
-    def build(self) -> docker.models.images.Image:
+    def build(self, tag: None | str = None) -> docker.models.images.Image:
         """Build the image from the Dockerfile."""
-        LOGGER.info(f"Building image from Dockerfile: {self.profile.dockerfile_path}")
+        LOGGER.info(f"Building image from Dockerfile: {str(_DOCKERFILE_PATH)}")
+        tag = tag or _BUILD_TAG
         image, logs = self.client.images.build(
-            path=_DOCKERFILE_PATH,
-            tag=_BUILD_TAG,
+            path=str(_DOCKERFILE_PATH),
+            tag=tag,
             rm=True,
         )
         LOGGER.info(f"Built image: {image}")

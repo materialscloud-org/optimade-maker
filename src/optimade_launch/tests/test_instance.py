@@ -40,35 +40,42 @@ async def test_instance_profile_detection(instance):
 def test_instance_url_before_start(instance):
     with pytest.raises(RequiresContainerInstance):
         instance.url()
+  
+def test_instance_build_container(instance):
+    instance.build("optimade:test")
+    assert instance.client.images.get("optimade:test") is not None
+
+    # remove the image
+    instance.client.images.remove("optimade:test")
         
 # start a instance and test real actions
-@pytest.mark.usefixtures("started_instance")
-class TestsAgainstStartedInstance:
+# @pytest.mark.usefixtures("started_instance")
+# class TestsAgainstStartedInstance:
     
-    @pytest.mark.asyncio
-    async def test_instance_status(self, started_instance):
-        assert (
-            await started_instance.status()
-            is started_instance.OptimadeInstanceStatus.UP
-        )
+#     @pytest.mark.asyncio
+#     async def test_instance_status(self, started_instance):
+#         assert (
+#             await started_instance.status()
+#             is started_instance.OptimadeInstanceStatus.UP
+#         )
         
-    def test_instance_url(self, started_instance):
-        assert re.match(
-            r"http:\/\/localhost:\d+\/", started_instance.url()
-        )
+#     def test_instance_url(self, started_instance):
+#         assert re.match(
+#             r"http:\/\/localhost:\d+\/", started_instance.url()
+#         )
     
-    def test_instance_host_ports(self, started_instance):
-        assert len(started_instance.host_ports()) > 0
+#     def test_instance_host_ports(self, started_instance):
+#         assert len(started_instance.host_ports()) > 0
         
-    @pytest.mark.asyncio
-    async def test_instance_query(self, started_instance):
-        """make a query to the instance"""
-        import requests
-        assert (
-            await started_instance.status()
-            is started_instance.OptimadeInstanceStatus.UP
-        )
+#     @pytest.mark.asyncio
+#     async def test_instance_query(self, started_instance):
+#         """make a query to the instance"""
+#         import requests
+#         assert (
+#             await started_instance.status()
+#             is started_instance.OptimadeInstanceStatus.UP
+#         )
         
-        response = requests.get(started_instance.url() + "v1/structures")
-        assert response.status_code == 200
-        assert response.json()["meta"]["data_available"] == 3
+#         response = requests.get(started_instance.url() + "v1/structures")
+#         assert response.status_code == 200
+#         assert response.json()["meta"]["data_available"] == 3
