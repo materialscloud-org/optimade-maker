@@ -5,6 +5,8 @@ from enum import Enum, auto
 import asyncio
 import sys
 from time import time
+import subprocess
+import functools
 
 import docker 
 from docker.models.containers import Container
@@ -136,15 +138,19 @@ class OptimadeInstance:
         
         # Create container
         assert self._container is None
+        params_container = {
+            "image": (self.image or self.pull()),
+            "name": self.profile.container_name(),
+            "environment": self.profile.environment(),
+            "ports": {"5000/tcp": self.profile.port},
+        }
+        if sys.platform == "linux" and "host.docker.internal" in self.profile.mongo_uri:
+            params_container["extra_hosts"] = {"host.docker.internal": "host-gateway"}
+        
         self._container = self.client.containers.create(
-            image=(self.image or self.pull()),
-            name=self.profile.container_name(),
-            environment=self.profile.environment(),
-            ports={"5000/tcp": self.profile.port},
+            **params_container,
         )
         
-        if ("localhost" in self.profile.mongo_uri or "127.0.0.1" in self.profile.mongo_uri) and sys.platform == "linux":
-            self._container.update({"network_mode": "host"})
         return self._container
     
     def recreate(self) -> None:
@@ -233,8 +239,6 @@ class OptimadeInstance:
         return self.OptimadeInstanceStatus.DOWN
     
     async def _web_service_online(self, container: Container) -> str:
-        import subprocess
-        import functools
         loop = asyncio.get_event_loop()
         LOGGER.info("Waiting for web service to become reachable...")
         assumed_protocol = "http"
@@ -254,7 +258,7 @@ class OptimadeInstance:
                 if result.returncode == 0:
                     LOGGER.info("web service reachable.")
                     return assumed_protocol
-                elif result.returncode in (7, 28, 52):
+                elif result.returncode in (7, 28, 52, 35):
                     await asyncio.sleep(2)  # optmidae not yet reachable
                     continue
                 elif result.returncode == 56 and assumed_protocol == "http":
@@ -266,7 +270,7 @@ class OptimadeInstance:
                     LOGGER.warning("Could not authenticate HTTPS certificate.")
                     return assumed_protocol
                 else:
-                    raise FailedToWaitForServices(f"Failed to reach web service ({result.exit_code}).")
+                    raise FailedToWaitForServices(f"Failed to reach web service ({result.returncode}).")
             except docker.errors.APIError:
                 LOGGER.error("Failed to reach web service. Aborting.")
                 raise FailedToWaitForServices(
@@ -279,7 +283,7 @@ class OptimadeInstance:
         start = time()
         _ = await asyncio.gather(
             self._host_port_assigned(container),
-            self._web_service_online(container),
+            # self._web_service_online(container),
         )
         LOGGER.info(
             f"Services came up after {time() - start:.1f} seconds ({container.id})."

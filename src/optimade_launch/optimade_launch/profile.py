@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import toml
+import sys
 from dataclasses import dataclass, field, asdict
 from docker.models.containers import Container
 
@@ -50,7 +51,7 @@ class Profile:
             self.mongo_uri = self.mongo_uri.replace("localhost", "host.docker.internal")
         if "127.0.0.1" in self.mongo_uri:
             self.mongo_uri = self.mongo_uri.replace("127.0.0.1", "host.docker.internal")
-            
+                
         return {
             "OPTIMADE_CONFIG_FILE": None,
             "optimade_insert_test_data": False,

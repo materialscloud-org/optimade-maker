@@ -101,8 +101,9 @@ async def _async_start(
             OptimadeInstanceStatus.CREATED,
             OptimadeInstanceStatus.EXITED,
         ):
-            with spinner("Starting container..."):
-                instance.start()
+            # with spinner("Starting container..."):
+            #     instance.start()
+            instance.start()
         
         # TODO handle restart and force
         
