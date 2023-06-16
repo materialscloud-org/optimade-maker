@@ -7,18 +7,18 @@ import tarfile
 import zipfile
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
-
 import requests
 
 requests.packages.urllib3.disable_warnings()  # type: ignore
 
 # The api to get the metadata of the entries in the Materials Cloud Archive
+DEFAULT_ARCHIVE_URL = "https://archive.materialscloud.org"
 
-
-def get_all_records(url):
+def get_all_records(base_url: str = DEFAULT_ARCHIVE_URL) -> dict:
     """
     Get all the records in the Materials Cloud Archive.
     """
+    url = base_url +  "/api/records/?sort=mostrecent&page=1&size=9999"
     r = requests.get(url, allow_redirects=True, verify=False)
     s = json.loads(r.content.decode("utf-8"))
     recrods = s["hits"]["hits"]
@@ -26,7 +26,7 @@ def get_all_records(url):
     return recrods
 
 
-def get_parsed_records():
+def get_parsed_records() -> list:
     import os
 
     old_records = []
@@ -36,55 +36,7 @@ def get_parsed_records():
             old_records.append(f[0])
     return old_records
 
-
-def parse_optimade_config():
-    """Parse OPTIMADE config file"""
-    pass
-
-
-def get_record_id(doi):
-    return doi.replace("10.24435/materialscloud:", "")
-
-
-def get_record_url(record_id):
-    api_url = "https://archive.materialscloud.org/api/records/"
-    return api_url + record_id
-
-
-def get_file_url(record_id, filename, checksum):
-    filename = filename.replace(" ", "+")
-    return f"https://archive.materialscloud.org/record/file_stats?record_id={record_id}&checksum={checksum}&filename={filename}"
-
-
-def get_file_urls_from_doi(record_id, max_size):
-    json_url = get_record_url(record_id)
-
-    try:
-        r = requests.get(json_url, allow_redirects=True, verify=False)
-        s = json.loads(r.content.decode("utf-8"))
-        record_json = s["metadata"]
-
-        files = [
-            {"filename": f["key"], "checksum": f["checksum"]}
-            for f in record_json["_files"]
-            if f["size"] <= max_size
-        ]
-        discarded_files = [
-            f["key"] for f in record_json["_files"] if f["size"] > max_size
-        ]
-        file_urls = [get_file_url(record_id, f) for f in files]
-
-        if len(discarded_files) > 0:
-            return dict(zip(file_urls, files)), dict({record_id: discarded_files})
-        else:
-            return dict(zip(file_urls, files)), dict()
-    except HTTPError as e:
-        print("HTTP Error: {} {}".format(e.code, json_url))
-    except URLError as e:
-        print("URL Error: {} {}".format(e.reason, json_url))
-
-
-def download_file(url, tmpdir):
+def download_file(url: str, tmpdir: str) -> None:
     """
     Downloads file
     """
@@ -110,7 +62,7 @@ def download_file(url, tmpdir):
         print("URL Error: {} {}".format(e.reason, url))
 
 
-def extract(path, tmpdir):
+def extract(path: str, tmpdir: str) -> None:
     """Extract archive"""
 
     try:
