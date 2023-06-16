@@ -7,6 +7,7 @@ import sys
 from time import time
 import subprocess
 import functools
+from contextlib import contextmanager
 
 import docker 
 from docker.models.containers import Container
@@ -18,6 +19,7 @@ from pymongo.errors import ServerSelectionTimeoutError
 from .core import LOGGER
 from .profile import Profile
 from .database import inject_data
+from .util import _async_wrap_iter
 
 def _get_host_ports(container: Container) -> Generator[int, None, None]:
     try:
@@ -25,6 +27,16 @@ def _get_host_ports(container: Container) -> Generator[int, None, None]:
         yield from (int(i["HostPort"]) for i in ports["5000/tcp"])
     except KeyError:
         pass
+    
+@contextmanager
+def _async_logs(
+    container: Container,
+) -> Generator[AsyncGenerator[Any, None], None, None]:
+    logs = container.logs(stream=True, follow=False)
+    try:
+        yield _async_wrap_iter(logs)
+    finally:
+        logs.close()
 
 
 class FailedToWaitForServices(RuntimeError):
@@ -258,7 +270,7 @@ class OptimadeInstance:
                 if result.returncode == 0:
                     LOGGER.info("web service reachable.")
                     return assumed_protocol
-                elif result.returncode in (7, 28, 52, 35):
+                elif result.returncode in (7, 28, 52):
                     await asyncio.sleep(2)  # optmidae not yet reachable
                     continue
                 elif result.returncode == 56 and assumed_protocol == "http":
@@ -269,6 +281,10 @@ class OptimadeInstance:
                     LOGGER.info("web service reachable.")
                     LOGGER.warning("Could not authenticate HTTPS certificate.")
                     return assumed_protocol
+                elif result.returncode == 35 and assumed_protocol == "https":
+                    assumed_protocol = "http"
+                    LOGGER.info("https not working, change back to http and wait longer.")
+                    continue
                 else:
                     raise FailedToWaitForServices(f"Failed to reach web service ({result.returncode}).")
             except docker.errors.APIError:
@@ -283,11 +299,17 @@ class OptimadeInstance:
         start = time()
         _ = await asyncio.gather(
             self._host_port_assigned(container),
-            # self._web_service_online(container),
+            self._web_service_online(container),
         )
         LOGGER.info(
             f"Services came up after {time() - start:.1f} seconds ({container.id})."
         )
+        
+    async def echo_logs(self) -> None:
+        assert self.container is not None
+        with _async_logs(self.container) as logs:
+            async for chunk in logs:
+                LOGGER.debug(f"{self.container.id}: {chunk.decode('utf-8').strip()}")
 
     def url(self) -> str:
         self._requires_container()
