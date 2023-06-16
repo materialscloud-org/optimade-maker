@@ -37,15 +37,24 @@ Will be served with a provider-specific prefix in the actual API, so must not st
     )
 
 
+class ParsedFiles(BaseModel):
+    file: str = Field(description="The filename containing the data to be parsed.")
+
+    matches: Optional[list[str]] = Field(
+        description="A list of matches to be used to filter the file contents. Each match can use simple '*' wildcard syntax.",
+        examples=[["structures/*.cif", "relaxed-structures/1.cif"]],
+    )
+
+
 class EntryConfig(BaseModel):
     entry_type: str = Field(
         description="The OPTIMADE entry type, e.g. `structures` or `references`."
     )
-    entry_paths: list[str] = Field(
+    entry_paths: list[ParsedFiles] = Field(
         description="A list of paths patterns to parse, provided relative to the top-level of the MCloud archive entry, after any compressed locations have been decompressed. Supports Python glob syntax for wildcards."
     )
 
-    property_paths: Optional[list[str]] = Field(
+    property_paths: Optional[list[ParsedFiles]] = Field(
         description="A list of path patterns of auxiliary files that contain mappings from the entries to additional properties."
     )
 
@@ -80,6 +89,14 @@ class Config(BaseModel):
     data_paths: Optional[list[str]] = Field(
         description="A list of locations of compressed/archived files that must be decompressed before parsing."
     )
+
+    @validator("entries")
+    def check_one_entry_per_type(cls, v):
+        if len({e.entry_type for e in v}) != len(v):
+            raise ValueError(
+                "Each entry type must be listed only once in the config file."
+            )
+        return v
 
     @staticmethod
     def from_file(path: str):

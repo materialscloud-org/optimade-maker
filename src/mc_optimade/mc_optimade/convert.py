@@ -45,7 +45,12 @@ def convert_archive(archive_path: Path) -> Path:
     mc_config = Config.from_file(archive_path / "optimade.yaml")
 
     # first, decompress any provided data paths
-    for data_path in mc_config.data_paths:
+    data_paths: set[Path] = set()
+    for entry in mc_config.entries:
+        for e in entry.entry_paths:
+            data_paths.add((archive_path / str(e.file)).resolve())
+
+    for data_path in data_paths:
         inflate_archive(archive_path, data_path)
 
     optimade_entries = defaultdict(list)
@@ -60,7 +65,7 @@ def convert_archive(archive_path: Path) -> Path:
     return jsonl_path
 
 
-def inflate_archive(archive_path: Path, data_path: str) -> None:
+def inflate_archive(archive_path: Path, data_path: Path) -> None:
     """For a given compressed file in an archive entry, decompress it and place
     the contents at the root of the archive entry file system.
 
@@ -119,15 +124,17 @@ def construct_entries(
     # collect entry paths using glob/explicit syntax
     real_entry_paths: List[Path] = []
     for path in entry_config.entry_paths:
-        if "*" in path:
-            wildcard = list(Path(archive_path).glob(path))
-            if not wildcard:
-                raise FileNotFoundError(
-                    f"Could not find any files matching wildcard {path}"
-                )
-            real_entry_paths += wildcard
-        else:
-            real_entry_paths += [Path(archive_path) / path]
+        matches = path.matches
+        for m in matches:
+            if "*" in m:
+                wildcard = list(Path(archive_path).glob(m))
+                if not wildcard:
+                    raise FileNotFoundError(
+                        f"Could not find any files matching wildcard {m!r}"
+                    )
+                real_entry_paths += wildcard
+            else:
+                real_entry_paths += [Path(archive_path) / m]
 
     # Check all files exist
     missing_paths = []

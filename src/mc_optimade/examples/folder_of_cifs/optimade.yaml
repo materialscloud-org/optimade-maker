@@ -4,14 +4,14 @@ database_description: >-
 entries:
   - entry_type: structures
     entry_paths:
-    - file: structures.zip
-      matches: 
-      - structures/cifs/*.cif
+      - file: structures.zip
+        matches:
+          - structures/cifs/*.cif
     property_paths:
-    - file: data.tar.gz
-      matches:     
-      - data/data.csv
-      - data/data2.csv
+      - file: data.tar.gz
+        matches:
+          - data/data.csv
+          - data/data2.csv
     property_definitions:
     - name: energy
       title: Total energy per atom
