@@ -4,9 +4,8 @@ version = "0.1"
 
 dependencies = [
     "pydantic",
-    "optimade",
+    "optimade[ase]",
     "pyyaml",
-    "ase",
     "pybtex",
     "tqdm",
     "requests",
