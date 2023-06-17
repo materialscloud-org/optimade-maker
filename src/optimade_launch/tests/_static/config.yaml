@@ -4,4 +4,4 @@ jsonl_paths:
    - /var/lib/optimade-archive/te-st.jsonl
 mongo_uri: mongodb://localhost:27017
 db_name: te-st
-unix_sock: /var/lib/optimade-sockets/te-st.sock:/tmp/te-st.sock
+unix_sock: /var/lib/optimade-sockets/te-st.sock

@@ -8,7 +8,7 @@ import asyncio
 
 from .core import LOGGER
 from .util import spinner
-from .instance import OptimadeInstance
+from .instance import OptimadeInstance, _BUILD_TAG
 from .application_state import ApplicationState
 from .profile import DEFAULT_PORT, Profile
 from .version import __version__
@@ -82,14 +82,14 @@ async def _async_start(
     # get the instance
     instance = OptimadeInstance(client=app_state.docker_client, profile=profile)
     
-    msg = f"Downloading image '{instance.profile.image}, this may take a while..."
+    msg = f"Building image TAG='{_BUILD_TAG}', this may take a while..."
     
     with spinner(msg):
-        instance.pull()
+        instance.build()
     
     if instance.image is None:
         raise click.ClickException(
-            f"Unable to pull image '{instance.profile.image}'"
+            f"Unable to build image '{_BUILD_TAG}'"
         )
         
     try:
@@ -144,11 +144,8 @@ async def _async_start(
                     
             LOGGER.debug("Preparing connection information...")
             url = instance.url()
-            host_port = instance.host_ports()
-            
-            click.secho(f"OPTIMADE instance is ready at {url}:{host_port}", fg="green")
-            
-            assert len(host_port) > 0, "No host port found"
+
+            click.secho(f"OPTIMADE instance is ready at {url}", fg="green")
             
         else:
             click.secho(
@@ -383,6 +380,8 @@ def create_profile(ctx, app_state, port: int | None, mongo_uri: str, jsonl: list
             "db_name": db_name or f"optimade-{profile}",
             "port": None,
         }
+        
+    print(params)
             
     try:
         app_state.config.get_profile(profile)

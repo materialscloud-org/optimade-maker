@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 import asyncio
 import sys
+import os
 from time import time
 import subprocess
 import functools
@@ -74,7 +75,7 @@ class OptimadeInstance:
     
     def _get_image(self) -> docker.models.images.Image | None:
         try:
-            return self.client.images.get(self.profile.image)
+            return self.client.images.get(_BUILD_TAG)
         except docker.errors.ImageNotFound:
             return None
 
@@ -106,16 +107,21 @@ class OptimadeInstance:
     
     def build(self, tag: None | str = None) -> docker.models.images.Image:
         """Build the image from the Dockerfile."""
-        LOGGER.info(f"Building image from Dockerfile: {str(_DOCKERFILE_PATH)}")
-        tag = tag or _BUILD_TAG
-        image, logs = self.client.images.build(
-            path=str(_DOCKERFILE_PATH),
-            tag=tag,
-            rm=True,
-        )
-        LOGGER.info(f"Built image: {image}")
-        LOGGER.debug(f"Build logs: {logs}")
-        return image
+        try:
+            LOGGER.info(f"Building image from Dockerfile: {str(_DOCKERFILE_PATH)}")
+            tag = tag or _BUILD_TAG
+            image, logs = self.client.images.build(
+                path=str(_DOCKERFILE_PATH),
+                tag=tag,
+                rm=True,
+            )
+            LOGGER.info(f"Built image: {image}")
+            LOGGER.debug(f"Build logs: {logs}")
+            self._image = image
+            return image
+        except docker.errors.BuildError as exc:
+            LOGGER.error(f"Build failed: {exc}")
+            return None
     
     def pull(self) -> docker.models.images.Image | None:
         try:
@@ -167,15 +173,25 @@ class OptimadeInstance:
         
         # Create container
         assert self._container is None
+        environment = self.profile.environment()
         params_container = {
-            "image": (self.image or self.pull()),
+            "image": (self.image or self.build()),
             "name": self.profile.container_name(),
-            "environment": self.profile.environment(),
-            "ports": {"5000/tcp": self.profile.port},
         }
+        if self.profile.port is not None:
+            params_container["ports"] = {"5000/tcp": self.profile.port}
+        
+        if self.profile.unix_sock is not None:    
+            # volume bind folder
+            host_sock_folder = os.path.dirname(self.profile.unix_sock)
+            sock_filename = os.path.basename(self.profile.unix_sock)
+            params_container["volumes"] = {host_sock_folder: {"bind": '/tmp', "mode": "rw"}}
+            environment["UNIX_SOCK"] = f"/tmp/{sock_filename}"
+            
         if sys.platform == "linux" and "host.docker.internal" in self.profile.mongo_uri:
             params_container["extra_hosts"] = {"host.docker.internal": "host-gateway"}
         
+        params_container["environment"] = environment
         self._container = self.client.containers.create(
             **params_container,
         )
@@ -271,13 +287,19 @@ class OptimadeInstance:
         loop = asyncio.get_event_loop()
         LOGGER.info("Waiting for web service to become reachable...")
         assumed_protocol = "http"
-        port = self.profile.port
+        if self.profile.port is not None:
+            port = self.profile.port
+            curl_command = f"curl --fail-early --fail --silent --max-time 1.0 {assumed_protocol}://localhost:{port}/v1/info"
+        
+        if self.profile.unix_sock is not None:
+            curl_command = f"curl --fail-early --fail --silent --max-time 1.0 {assumed_protocol}://localhost/v1/info --unix-socket {self.profile.unix_sock}"
+        
         while True:
             try:
                 LOGGER.debug("Curl web...")
                 partial_func = functools.partial(
                     subprocess.run, 
-                    f"curl --fail-early --fail --silent --max-time 1.0 {assumed_protocol}://localhost:{port}/v1/info",
+                    curl_command,
                     shell=True, text=True, capture_output=True,
                 )
                 result = await loop.run_in_executor(
@@ -314,10 +336,11 @@ class OptimadeInstance:
         container = self._requires_container()
         LOGGER.info(f"Waiting for services to come up ({container.id})...")
         start = time()
-        _ = await asyncio.gather(
-            self._host_port_assigned(container),
-            self._web_service_online(container),
-        )
+        coros = [self._web_service_online(container)]
+        if self.profile.port is not None:
+            coros.append(self._host_port_assigned(container))
+            
+        _ = await asyncio.gather(*coros)
         LOGGER.info(
             f"Services came up after {time() - start:.1f} seconds ({container.id})."
         )
@@ -332,13 +355,17 @@ class OptimadeInstance:
         self._requires_container()
         assert self.container is not None
         self.container.reload()
-        host_ports = list(_get_host_ports(self.container))
-        if len(host_ports) > 0:
-            return (
-                f"{self._protocol}://localhost:{host_ports[0]}/"
-            )
-        else:
-            raise NoHostPortAssigned(self.container.id)
+        if self.profile.unix_sock is not None:
+            return f"{self._protocol}://localhost/ with unix socket {self.profile.unix_sock}"
+        
+        if self.profile.port is not None:
+            host_ports = list(_get_host_ports(self.container))
+            if len(host_ports) > 0:
+                return (
+                    f"{self._protocol}://localhost:{host_ports[0]}/"
+                )
+            else:
+                raise NoHostPortAssigned(self.container.id)
         
     
         

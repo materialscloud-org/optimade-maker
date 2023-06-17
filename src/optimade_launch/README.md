@@ -86,8 +86,8 @@ The optimade-launch profile can be created from yml file with setting the custom
 ```yml
 name: <parsed_doi>
 socket:
-   - /host/path.sock:/container/path.sock
-   - /var/lib/optimade-sockets/<parsed_doi>.sock:/tmp/<parsed_doi>.sock
+   - /host/path.sock
+   - /var/lib/optimade-sockets/<parsed_doi>.sock
 jsonl:
    - /var/lib/optimade-archive/<parsed_doi>.jsonl
 mongo_uri: mongodb://localhost:27017

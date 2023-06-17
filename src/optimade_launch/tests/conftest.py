@@ -40,7 +40,7 @@ def docker_client():
 
 @pytest.fixture(scope="function")
 def profile(config):
-    return Profile(port=8981)
+    return Profile(port=8981, unix_sock="/tmp/optimade-sock/test.sock")
 
 @pytest.fixture(scope="function")
 def config():
