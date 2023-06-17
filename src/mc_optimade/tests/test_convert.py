@@ -16,4 +16,3 @@ def test_convert_example_archives(archive_path, tmp_path):
 
     jsonl_path = convert_archive(tmp_path)
     assert jsonl_path.exists()
-    breakpoint()
