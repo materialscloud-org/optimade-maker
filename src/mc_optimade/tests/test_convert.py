@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from mc_optimade import convert_archive
+from mc_optimade.convert import convert_archive
 
 EXAMPLE_ARCHIVES = (Path(__file__).parent.parent / "examples").glob("*")
 
@@ -16,4 +16,3 @@ def test_convert_example_archives(archive_path, tmp_path):
 
     jsonl_path = convert_archive(tmp_path)
     assert jsonl_path.exists()
-    breakpoint()
