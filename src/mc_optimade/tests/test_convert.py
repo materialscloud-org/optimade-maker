@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from mc_optimade import convert_archive
+from mc_optimade.convert import convert_archive
 
 EXAMPLE_ARCHIVES = (Path(__file__).parent.parent / "examples").glob("*")
 
