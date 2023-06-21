@@ -29,13 +29,30 @@ class ArchiveRecord:
         directory to save the downloaded files.
     """
 
-    def __init__(self, id: int, archive_url: str = DEFAULT_ARCHIVE_URL,
-                 dir="/tmp/archive") -> None:
+    def __init__(self, id: int, archive_url: str = DEFAULT_ARCHIVE_URL) -> None:
         self.id = id
         self.archive_url = archive_url
-        self.dir = os.path.join(dir, str(self.id))
         self.url = self.get_record_url(id)
+
+        self.metadata = self.get_record_metadata()
+        self.doi_id = self.get_doi_id()
         self.files = self.get_files()
+
+        self.default_path = os.path.join("/tmp/archive", self.doi_id)
+
+        self.optimade_config_name = self.check_optimade_config_name()
+        
+    def check_optimade_config_name(self):
+        """
+        Check if optimade config file exists. If it doesn't, return None
+        """
+        optimade_yml_name = None
+        for name_candidate in ["optimade.yaml", "optimade.yml"]:
+            if name_candidate in self.files:
+                optimade_yml_name = name_candidate
+                break
+        return optimade_yml_name
+
 
     def process(self):
         if not self.is_optimade_record():
@@ -44,9 +61,11 @@ class ArchiveRecord:
         self.download_files()
         # self.convert_to_optimade()
 
-    @property
-    def metadata(self):
-        return self.get_record_metadata()
+    def download_optimade_files(self, path=None, extract_files=False):
+        if not self.is_optimade_record():
+            return
+        self.load_optimade_config()
+        self.download_files(path, extract_files=extract_files)
 
     def get_record_url(self, record_id: int) -> str:
         return self.archive_url + "api/records/" + str(record_id)
@@ -71,6 +90,18 @@ class ArchiveRecord:
             print("We failed to reach a server.")
             print("Reason: ", e.reason)
 
+    def get_doi_id(self):
+        """
+        Get the DOI identifier of the record, e.g.
+        "10.24435/materialscloud:jq-0s" -> "jq-0s"
+        "10.24435/materialscloud:2020.0040/v1" -> "2020.0040/v1"
+
+        NOTE: the slash in the old format currently unsupported (e.g. can't make a folder,
+        or docker container), but these entries any way don't contain optimade.yml, so it
+        should be safe to ignore this for now. 
+        """
+        return self.metadata["doi"].split(":")[-1]
+
     def get_files(self):
         """
         Get the file list of a record.
@@ -80,32 +111,29 @@ class ArchiveRecord:
 
     def is_optimade_record(self):
         """
-        Check if the record has a file called "optimade.yaml" or "optimade.yml".
+        return if the record has the optimade config file.
         """
-        return "optimade.yaml" in self.files or "optimade.yml" in self.files
+        return self.optimade_config_name is not None
 
-    def download_mcloud_yaml_file(self, filename):
+    def download_optimade_config_file(self):
         """
         Try to download the optimade.yaml/yml file.
         """
+        filename = self.optimade_config_name
         url = self.get_file_url(self.id, filename, self.files[filename])
         response = requests.get(url, allow_redirects=True)
         if not response.status_code == 200:
-            raise RuntimeError("Could not download optimade.yaml/yml file.")
+            raise RuntimeError(f"Could not download {filename} file.")
         return response
 
     def load_optimade_config(self):
         """
-        Parse the optimade.yaml file.
+        Download and parse the optimade.yaml/yml file.
         """
-        try:
-            response = self.download_mcloud_yaml_file("optimade.yaml")
-        except RuntimeError:
-            response = self.download_mcloud_yaml_file("optimade.yml")
-
+        response = self.download_optimade_config_file()
         self.mc_config = Config.from_string(response.content.decode("utf-8"))
 
-    def download_files(self, extract_files: bool = False):
+    def download_files(self, path=None, extract_files: bool = False):
         """
         Download all files from the optimade file list.
         """
@@ -113,18 +141,27 @@ class ArchiveRecord:
         from .utils import download_file, extract
         import shutil
         import os
+
+        if not path:
+            path = self.default_path
+
         # remove the directory if it exists
-        if os.path.exists(self.dir) and os.path.isdir(self.dir):
-            shutil.rmtree(self.dir)
-        os.makedirs(self.dir)
+        if os.path.exists(path) and os.path.isdir(path):
+            shutil.rmtree(path)
+        os.makedirs(path)
+
+        # download optimade.yml/yaml and rename to "yml->yaml"
+        file_url = self.get_file_url(self.id, self.optimade_config_name, self.files[self.optimade_config_name])
+        download_file(file_url, path, rename="optimade.yaml")
+
         # Extract and process files in record
-        for file in tqdm.tqdm(self.mc_config.data_paths, desc="Downloading data files"):
-            file_url = self.get_file_url(self.id, file, self.files[file])
-            path = download_file(file_url, self.dir)
+        for filename in tqdm.tqdm(self.mc_config.data_paths, desc="Downloading data files"):
+            file_url = self.get_file_url(self.id, filename, self.files[filename])
+            file_path = download_file(file_url, path)
             if extract_files:
                 try:
-                    print("\nExtracting file ", path)
-                    extract(path, self.dir)
+                    print("\nExtracting file ", file_path)
+                    extract(file_path, path)
                     print("Extracted!")
                 except ValueError as e:
                     print(e)
