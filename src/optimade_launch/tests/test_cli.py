@@ -90,8 +90,6 @@ def test_create_with_all_parameters(tmp_path_factory):
 
     tmp1 = tmp_path_factory.mktemp("tmp1.jsonl")
     tmp2 = tmp_path_factory.mktemp("tmp2.jsonl")
-    print(tmp1)
-    print(tmp2)
     # Create new-profile
     result: Result = runner.invoke(
         cli.cli, ["profile", "create", "new-profile", "--port", "8999", "--mongo-uri", "mongodb://localhost:27017", "--jsonl", str(tmp1), "--jsonl", str(tmp2), "--db-name", "optimade-test"], input="n\n"
@@ -110,3 +108,27 @@ def test_create_with_all_parameters(tmp_path_factory):
     assert result.exit_code == 0
     result: Result = runner.invoke(cli.cli, ["profile", "list"])
     assert "new-profile" not in result.output
+    
+def test_create_with_config(static_dir):
+    runner: CliRunner = CliRunner()
+    
+    config_file = static_dir / "config.yaml"
+    result: Result = runner.invoke(
+        cli.cli, ["profile", "create", "--config", str(config_file)], input="n\n"
+    )
+    assert result.exit_code == 0
+    
+    # show profile
+    result: Result = runner.invoke(cli.cli, ["profile", "show", "te-st"])
+    assert result.exit_code == 0
+    assert "te-st" in result.output
+    assert "port" not in result.output
+    
+    # Remove new-profile
+    result: Result = runner.invoke(
+        cli.cli, ["profile", "remove", "te-st"], input="y\n"
+    )
+    assert result.exit_code == 0
+    result: Result = runner.invoke(cli.cli, ["profile", "list"])
+    assert "te-st" not in result.output
+    

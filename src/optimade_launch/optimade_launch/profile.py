@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import toml
+import sys
 from dataclasses import dataclass, field, asdict
 from docker.models.containers import Container
 
@@ -13,6 +14,8 @@ CONTAINER_PREFIX = "optimade"
 DEFAULT_PORT = 8081
 DEFAULT_IMAGE = "ghcr.io/materials-consortia/optimade:0.24.0"
 DEFAULT_MONGO_URI = "mongodb://127.0.0.1:27017"
+DEFAULT_BASE_URL = "http://localhost"
+DEFAULT_INDEX_BASE_URL = "http://localhost"
 
 DEFAULT_NAME = "default"
 
@@ -30,15 +33,19 @@ def _get_configured_host_port(container: Container) -> int | None:
 @dataclass
 class Profile:
     name: str = DEFAULT_NAME
-    port: int | None = field(default_factory=_default_port)
-    image: str = DEFAULT_IMAGE
     jsonl_paths: list[str] = field(default_factory=lambda: [])
     mongo_uri: str = DEFAULT_MONGO_URI
     db_name: str = "optimade"
+    port: int | None = None
+    unix_sock: str | None = None
+    optimade_base_url: str | None = DEFAULT_BASE_URL
+    optimade_index_base_url: str | None = DEFAULT_INDEX_BASE_URL
+    optimade_provider: str | None = None
     
     def __post_init__(self):
-        # TODO: Check if name is valid
-        pass
+        # default port is dependent on unix_sock
+        if self.port is None and self.unix_sock is None:
+            self.port = _default_port()
     
     def container_name(self) -> str:
         return f"{CONTAINER_PREFIX}_{self.name}"
@@ -50,7 +57,7 @@ class Profile:
             self.mongo_uri = self.mongo_uri.replace("localhost", "host.docker.internal")
         if "127.0.0.1" in self.mongo_uri:
             self.mongo_uri = self.mongo_uri.replace("127.0.0.1", "host.docker.internal")
-            
+                
         return {
             "OPTIMADE_CONFIG_FILE": None,
             "optimade_insert_test_data": False,
@@ -60,8 +67,8 @@ class Profile:
             "optimade_structures_collection": "structures",
             "optimade_page_limit": 25,
             "optimade_page_limit_max": 100,
-            "optimade_base_url": f"http://localhost:{self.port}", # ??
-            "optimade_index_base_url": f"http://localhost:{self.port}", # ??
+            "optimade_base_url": self.optimade_base_url,
+            "optimade_index_base_url": self.optimade_index_base_url,
             "optimade_provider": "{\"prefix\":\"myorg\",\"name\":\"Materials Cloud Archive\",\"description\":\"Short description for My Organization\",\"homepage\":\"https://example.org\"}",
         }
         
