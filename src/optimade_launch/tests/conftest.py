@@ -18,7 +18,9 @@ import pymongo
 
 mongo = create_mongo_fixture()
 
-static_dir = Path(__file__).parent / "_static"
+@pytest.fixture(scope="function")
+def static_dir():
+    return Path(__file__).parent / "_static"
 
 # Redefine event_loop fixture to be session-scoped.
 # See: https://github.com/pytest-dev/pytest-asyncio#async-fixtures
@@ -38,7 +40,7 @@ def docker_client():
 
 @pytest.fixture(scope="function")
 def profile(config):
-    return Profile(port=8981)
+    return Profile(port=8981, unix_sock="/tmp/optimade-sock/test.sock")
 
 @pytest.fixture(scope="function")
 def config():
@@ -70,7 +72,7 @@ def instance(docker_client, profile):
             
 
 @pytest_asyncio.fixture(scope="function")
-async def started_instance(docker_client, monkeypatch, mongo):    
+async def started_instance(docker_client, monkeypatch, mongo, static_dir):    
     client = pymongo.MongoClient(**mongo.pmr_credentials.as_mongo_kwargs())
     monkeypatch.setattr(pymongo, "MongoClient", lambda *args, **kwargs: client)
     
