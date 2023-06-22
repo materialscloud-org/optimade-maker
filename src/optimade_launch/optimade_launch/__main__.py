@@ -403,8 +403,8 @@ def create_profile(ctx, app_state, port: int | None, mongo_uri: str, jsonl: list
     app_state.config.profiles.append(new_profile)
     app_state.save_config()
     click.echo(f"Created profile '{profile}'.")
-    if click.confirm("Do you want to edit it now?", default=True):
-        ctx.invoke(edit_profile, profile=profile)
+    # if click.confirm("Do you want to edit it now?", default=True):
+    #     ctx.invoke(edit_profile, profile=profile)
         
 @profile.command("remove")
 @click.argument("profile")

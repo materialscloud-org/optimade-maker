@@ -36,7 +36,7 @@ def get_parsed_records() -> list:
             old_records.append(f[0])
     return old_records
 
-def download_file(url: str, tmpdir: str) -> None:
+def download_file(url: str, tmpdir: str, rename: str = None) -> None:
     """
     Downloads file
     """
@@ -44,8 +44,11 @@ def download_file(url: str, tmpdir: str) -> None:
         # when reading from archive or staging-invenio where the certificate is valid
         response = urlopen(url)
 
-        filename = os.path.basename(url).split("filename=")
-        fpath = os.path.join(tmpdir, filename[1])
+        filename = os.path.basename(url).split("filename=")[1]
+        if rename: 
+            filename = rename
+
+        fpath = os.path.join(tmpdir, filename)
 
         # Open our local file for writing
         with open(fpath, "wb") as local_file:

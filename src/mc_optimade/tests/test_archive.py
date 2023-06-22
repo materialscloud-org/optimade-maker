@@ -14,8 +14,7 @@ def test_archive_record_process():
     from mc_optimade.archive.archive_record import ArchiveRecord
     import os
     record = ArchiveRecord(test_record_id,
-                           archive_url=archive_url,
-                           dir="/tmp/archive")
+                           archive_url=archive_url)
     record.process()
-    files = os.listdir(record.dir)
+    files = os.listdir(record.default_path)
     assert "structures.zip" in files
