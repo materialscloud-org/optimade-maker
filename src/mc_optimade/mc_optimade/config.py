@@ -4,10 +4,17 @@ how an OPIMADE API should be constructed from the entry.
 
 """
 
+__version__ = "0.1.0"
+
+from pathlib import Path
 from typing import Optional
 
 import yaml
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, root_validator, validator
+
+
+class UnsupportedConfigVersion(RuntimeError):
+    ...
 
 
 class PropertyDefinition(BaseModel):
@@ -78,6 +85,11 @@ class Config(BaseModel):
 
     """
 
+    config_version: str = Field(
+        "0.1.0",
+        description="The version of the `optimade.yaml` config specification.",
+    )
+
     database_description: str = Field(
         description="A human-readable description of the overall database to be provided alongside the data in the API."
     )
@@ -99,10 +111,16 @@ class Config(BaseModel):
         return v
 
     @staticmethod
-    def from_file(path: str):
+    def from_file(path: str | Path):
         """Load a `optimade.yaml` file from a path, and return a `Config` instance."""
         return Config(**yaml.safe_load(open(path)))
 
     @staticmethod
     def from_string(data: str):
         return Config(**yaml.safe_load(data))
+
+    @root_validator(pre=True)
+    def validate_config_version(cls, values):
+        if values.get("config_version") is None:
+            raise UnsupportedConfigVersion(f"Config version must be {__version__}.")
+        return values

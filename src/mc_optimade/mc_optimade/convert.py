@@ -6,7 +6,7 @@ OPTIMADE API.
 
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 import ase.io
 import pybtex.database
@@ -122,9 +122,9 @@ def construct_entries(
         )
 
     # collect entry paths using glob/explicit syntax
-    real_entry_paths: List[Path] = []
+    matches_by_file: Dict[Optional[str], List[Path]] = defaultdict(list)
     for path in entry_config.entry_paths:
-        matches = path.matches
+        matches = path.matches or []
         for m in matches:
             if "*" in m:
                 wildcard = list(Path(archive_path).glob(m))
@@ -132,26 +132,29 @@ def construct_entries(
                     raise FileNotFoundError(
                         f"Could not find any files matching wildcard {m!r}"
                     )
-                real_entry_paths += wildcard
+                matches_by_file[path.file] += wildcard
             else:
-                real_entry_paths += [Path(archive_path) / m]
+                matches_by_file[path.file] += [Path(archive_path) / m]
 
     # Check all files exist
     missing_paths = []
-    for path in real_entry_paths:
-        if not path.exists():
-            missing_paths.append(path)
+    for archive_file_path in matches_by_file:
+        for _path in matches_by_file[archive_file_path]:
+            if not _path.exists():
+                missing_paths.append(_path)
     if missing_paths:
         raise FileNotFoundError(f"Could not find the following files: {missing_paths}")
 
     # Parse all files
     parsed_entries = []
     entry_ids = []
-    for path in tqdm.tqdm(
-        real_entry_paths, desc=f"Parsing {entry_config.entry_type} files"
-    ):
-        parsed_entries.append(ENTRY_PARSERS[entry_config.entry_type](path))
-        entry_ids.append(path.name)
+    for archive_file_path in matches_by_file:
+        for _path in tqdm.tqdm(
+            matches_by_file[archive_file_path],
+            desc=f"Parsing {entry_config.entry_type} files",
+        ):
+            parsed_entries.append(ENTRY_PARSERS[entry_config.entry_type](_path))
+            entry_ids.append(f"{archive_file_path}/{_path}")
 
     # Construct OPTIMADE entries
     optimade_entries = []
