@@ -154,15 +154,17 @@ class ArchiveRecord:
         file_url = self.get_file_url(self.id, self.optimade_config_name, self.files[self.optimade_config_name])
         download_file(file_url, path, rename="optimade.yaml")
 
-        # Extract and process files in record
-        for filename in tqdm.tqdm(self.mc_config.data_paths, desc="Downloading data files"):
-            file_url = self.get_file_url(self.id, filename, self.files[filename])
-            file_path = download_file(file_url, path)
-            if extract_files:
-                try:
-                    print("\nExtracting file ", file_path)
-                    extract(file_path, path)
-                    print("Extracted!")
-                except ValueError as e:
-                    print(e)
-                    print("Try to open the file and count the structures...")
+        # download files in record
+        for entry in self.mc_config.entries:
+            for entry_path in entry.entry_paths:
+                fname = entry_path.file
+                file_url = self.get_file_url(self.id, fname, self.files[fname])
+                file_path = download_file(file_url, path)
+                if extract_files:
+                    try:
+                        print("\nExtracting file ", file_path)
+                        extract(file_path, path)
+                        print("Extracted!")
+                    except ValueError as e:
+                        print(e)
+                        print("Try to open the file and count the structures...")
