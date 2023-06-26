@@ -1,5 +1,6 @@
-from mc_optimade.config import UnsupportedConfigVersion
 import traceback
+
+from mc_optimade.config import UnsupportedConfigVersion
 
 archive_url = "https://staging-archive.materialscloud.org/"
 test_record_id = 1408
@@ -31,5 +32,5 @@ def test_archive_record_process():
         record.process()
         files = os.listdir(record.default_path)
         assert "structures.zip" in files
-    except UnsupportedConfigVersion as e:
+    except UnsupportedConfigVersion:
         traceback.print_exc()

@@ -148,13 +148,14 @@ def construct_entries(
     # Parse all files
     parsed_entries = []
     entry_ids = []
-    for archive_file_path in matches_by_file:
+    for archive_file in matches_by_file:
         for _path in tqdm.tqdm(
-            matches_by_file[archive_file_path],
+            matches_by_file[archive_file],
             desc=f"Parsing {entry_config.entry_type} files",
         ):
             parsed_entries.append(ENTRY_PARSERS[entry_config.entry_type](_path))
-            entry_ids.append(f"{archive_file_path}/{_path}")
+            path_in_archive = Path(_path).relative_to(Path(archive_path))
+            entry_ids.append(f"{archive_file}/{path_in_archive}")
 
     # Construct OPTIMADE entries
     optimade_entries = []
@@ -188,6 +189,11 @@ def write_optimade_jsonl(
         raise RuntimeError(f"Not overwriting existing file at {jsonl_path}")
 
     with open(archive_path / "optimade.jsonl", "a") as jsonl:
+        # write the optimade jsonl header
+        header = {"x-optimade": {"meta": {"api_version": "1.1.0"}}}
+        jsonl.write(json.dumps(header))
+        jsonl.write("\n")
+
         for entry_type in optimade_entries:
             if optimade_entries[entry_type]:
                 for entry in optimade_entries[entry_type]:
