@@ -98,10 +98,6 @@ class Config(BaseModel):
         description="A list of entry configurations for each entry type."
     )
 
-    data_paths: Optional[list[str]] = Field(
-        description="A list of locations of compressed/archived files that must be decompressed before parsing."
-    )
-
     @validator("entries")
     def check_one_entry_per_type(cls, v):
         if len({e.entry_type for e in v}) != len(v):
