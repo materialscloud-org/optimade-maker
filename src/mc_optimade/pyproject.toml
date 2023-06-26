@@ -9,6 +9,7 @@ dependencies = [
     "pybtex",
     "tqdm",
     "requests",
+    "bson",
 ]
 
 [project.optional-dependencies]
