@@ -1,7 +1,7 @@
+import json
 import shutil
 from pathlib import Path
 
-import bson.json_util
 import pytest
 
 from mc_optimade.convert import convert_archive
@@ -21,7 +21,7 @@ def test_convert_example_archives(archive_path, tmp_path):
     with open(jsonl_path, "r") as fhandle:
         # check that header exists
         header_jsonl = fhandle.readline()
-        header = bson.json_util.loads(header_jsonl)
+        header = json.loads(header_jsonl)
         assert "x-optimade" in header
 
 
@@ -39,10 +39,10 @@ def test_example_archive_structure_id(tmp_path):
     assert jsonl_path.exists()
 
     with open(jsonl_path, "r") as fhandle:
-        fhandle.readline() # skip header
+        fhandle.readline()  # skip header
 
         # check that 2nd line is a structure and the ID is correct
         # note: can be we assume that the order will always be the same?
         structure_jsonl = fhandle.readline()
-        structure_dict = bson.json_util.loads(structure_jsonl)
+        structure_dict = json.loads(structure_jsonl)
         assert structure_dict["id"] == STRUCT_ID
