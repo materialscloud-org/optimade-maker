@@ -21,6 +21,9 @@ from pathlib import Path
 
 from time import time
 
+import traceback
+
+
 WORKING_DIR = "/tmp/archive"
 
 # Get list of db names in mongo. The script assumes that these entries are already set up and the process is skipped
@@ -65,7 +68,10 @@ for record in tqdm(records, desc="Processing records"):
                 record.download_optimade_files(path=entry_folder)
                 print(f"-- Download finished! Time: {time()-dl_start_time:.2f}")
     except Exception as e:
-        print(f"Skipping {record_id}, error:", repr(e))
+        print(f"#### Skipping {record_id}, error:")
+        print(traceback.format_exc())
+        print("#### -----------------------------")
+
 
 
 # -------------------------------------------------------------------------------

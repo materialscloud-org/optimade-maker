@@ -6,7 +6,7 @@ OPTIMADE API.
 
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 import ase.io
 import pybtex.database
@@ -45,7 +45,12 @@ def convert_archive(archive_path: Path) -> Path:
     mc_config = Config.from_file(archive_path / "optimade.yaml")
 
     # first, decompress any provided data paths
-    for data_path in mc_config.data_paths:
+    data_paths: set[Path] = set()
+    for entry in mc_config.entries:
+        for e in entry.entry_paths:
+            data_paths.add((archive_path / str(e.file)).resolve())
+
+    for data_path in data_paths:
         inflate_archive(archive_path, data_path)
 
     optimade_entries = defaultdict(list)
@@ -60,7 +65,7 @@ def convert_archive(archive_path: Path) -> Path:
     return jsonl_path
 
 
-def inflate_archive(archive_path: Path, data_path: str) -> None:
+def inflate_archive(archive_path: Path, data_path: Path) -> None:
     """For a given compressed file in an archive entry, decompress it and place
     the contents at the root of the archive entry file system.
 
@@ -117,34 +122,40 @@ def construct_entries(
         )
 
     # collect entry paths using glob/explicit syntax
-    real_entry_paths: List[Path] = []
+    matches_by_file: Dict[Optional[str], List[Path]] = defaultdict(list)
     for path in entry_config.entry_paths:
-        if "*" in path:
-            wildcard = list(Path(archive_path).glob(path))
-            if not wildcard:
-                raise FileNotFoundError(
-                    f"Could not find any files matching wildcard {path}"
-                )
-            real_entry_paths += wildcard
-        else:
-            real_entry_paths += [Path(archive_path) / path]
+        matches = path.matches or []
+        for m in matches:
+            if "*" in m:
+                wildcard = list(Path(archive_path).glob(m))
+                if not wildcard:
+                    raise FileNotFoundError(
+                        f"Could not find any files matching wildcard {m!r}"
+                    )
+                matches_by_file[path.file] += wildcard
+            else:
+                matches_by_file[path.file] += [Path(archive_path) / m]
 
     # Check all files exist
     missing_paths = []
-    for path in real_entry_paths:
-        if not path.exists():
-            missing_paths.append(path)
+    for archive_file_path in matches_by_file:
+        for _path in matches_by_file[archive_file_path]:
+            if not _path.exists():
+                missing_paths.append(_path)
     if missing_paths:
         raise FileNotFoundError(f"Could not find the following files: {missing_paths}")
 
     # Parse all files
     parsed_entries = []
     entry_ids = []
-    for path in tqdm.tqdm(
-        real_entry_paths, desc=f"Parsing {entry_config.entry_type} files"
-    ):
-        parsed_entries.append(ENTRY_PARSERS[entry_config.entry_type](path))
-        entry_ids.append(path.name)
+    for archive_file in matches_by_file:
+        for _path in tqdm.tqdm(
+            matches_by_file[archive_file],
+            desc=f"Parsing {entry_config.entry_type} files",
+        ):
+            parsed_entries.append(ENTRY_PARSERS[entry_config.entry_type](_path))
+            path_in_archive = Path(_path).relative_to(Path(archive_path))
+            entry_ids.append(f"{archive_file}/{path_in_archive}")
 
     # Construct OPTIMADE entries
     optimade_entries = []
@@ -178,6 +189,11 @@ def write_optimade_jsonl(
         raise RuntimeError(f"Not overwriting existing file at {jsonl_path}")
 
     with open(archive_path / "optimade.jsonl", "a") as jsonl:
+        # write the optimade jsonl header
+        header = {"x-optimade": {"meta": {"api_version": "1.1.0"}}}
+        jsonl.write(json.dumps(header))
+        jsonl.write("\n")
+
         for entry_type in optimade_entries:
             if optimade_entries[entry_type]:
                 for entry in optimade_entries[entry_type]:

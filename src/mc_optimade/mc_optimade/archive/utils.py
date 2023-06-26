@@ -7,6 +7,7 @@ import tarfile
 import zipfile
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
+
 import requests
 
 requests.packages.urllib3.disable_warnings()  # type: ignore
@@ -14,11 +15,12 @@ requests.packages.urllib3.disable_warnings()  # type: ignore
 # The api to get the metadata of the entries in the Materials Cloud Archive
 DEFAULT_ARCHIVE_URL = "https://archive.materialscloud.org"
 
+
 def get_all_records(base_url: str = DEFAULT_ARCHIVE_URL) -> dict:
     """
     Get all the records in the Materials Cloud Archive.
     """
-    url = base_url +  "/api/records/?sort=mostrecent&page=1&size=9999"
+    url = base_url + "/api/records/?sort=mostrecent&page=1&size=9999"
     r = requests.get(url, allow_redirects=True, verify=False)
     s = json.loads(r.content.decode("utf-8"))
     recrods = s["hits"]["hits"]
@@ -36,6 +38,7 @@ def get_parsed_records() -> list:
             old_records.append(f[0])
     return old_records
 
+
 def download_file(url: str, tmpdir: str, rename: str = None) -> None:
     """
     Downloads file
@@ -45,7 +48,7 @@ def download_file(url: str, tmpdir: str, rename: str = None) -> None:
         response = urlopen(url)
 
         filename = os.path.basename(url).split("filename=")[1]
-        if rename: 
+        if rename:
             filename = rename
 
         fpath = os.path.join(tmpdir, filename)

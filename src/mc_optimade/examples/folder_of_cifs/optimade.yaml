@@ -1,17 +1,19 @@
+config_version: 0.1.0
+
 database_description: >-
   This database contains some example CIFs.
-
-data_paths:
-  - structures.zip
-  - data.tar.gz
 
 entries:
   - entry_type: structures
     entry_paths:
-    - structures/cifs/*.cif
+      - file: structures.zip
+        matches:
+          - structures/cifs/*.cif
     property_paths:
-    - data/data.csv
-    - data/data2.csv
+      - file: data.tar.gz
+        matches:
+          - data/data.csv
+          - data/data2.csv
     property_definitions:
     - name: energy
       title: Total energy per atom
@@ -26,6 +28,3 @@ entries:
       title: Entry description
       description: Provides a human-readable description for this particular entry_type
       type: str
-#  - entry_type: references
-    #entry_paths:
-    #- refs.bib
