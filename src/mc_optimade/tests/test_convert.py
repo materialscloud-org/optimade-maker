@@ -3,6 +3,7 @@ import shutil
 from pathlib import Path
 
 import pytest
+from optimade.models import EntryInfoResource, StructureResource
 
 from mc_optimade.convert import convert_archive
 
@@ -39,10 +40,26 @@ def test_example_archive_structure_id(tmp_path):
     assert jsonl_path.exists()
 
     with open(jsonl_path, "r") as fhandle:
-        fhandle.readline()  # skip header
+        header = json.loads(fhandle.readline())
+        assert "x-optimade" in header
+        info = json.loads(fhandle.readline())
+        # TODO: need to include default OPTIMADE properties
+        assert len(info["properties"]) == 3
+        assert EntryInfoResource(**info)
 
-        # check that 2nd line is a structure and the ID is correct
-        # note: can be we assume that the order will always be the same?
-        structure_jsonl = fhandle.readline()
-        structure_dict = json.loads(structure_jsonl)
-        assert structure_dict["id"] == STRUCT_ID
+        for _ in range(3):
+            structure_jsonl = fhandle.readline()
+            structure_dict = json.loads(structure_jsonl)
+            assert StructureResource(**structure_dict)
+
+            if structure_dict["id"] == STRUCT_ID:
+                assert structure_dict["id"] == STRUCT_ID
+                assert structure_dict["attributes"]["_mcarchive_energy"] == -0.54
+                assert structure_dict["attributes"]["_mcarchive_property_b"] == 0.99
+                assert (
+                    structure_dict["attributes"]["_mcarchive_structure_description"]
+                    == "some description"
+                )
+                break
+        else:
+            assert False, f"Could not find structure with id {STRUCT_ID}"
