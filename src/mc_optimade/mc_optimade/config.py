@@ -61,12 +61,14 @@ class EntryConfig(BaseModel):
         description="A list of paths patterns to parse, provided relative to the top-level of the MCloud archive entry, after any compressed locations have been decompressed. Supports Python glob syntax for wildcards."
     )
 
-    property_paths: Optional[list[ParsedFiles]] = Field(
-        description="A list of path patterns of auxiliary files that contain mappings from the entries to additional properties."
+    property_paths: list[ParsedFiles] = Field(
+        default_factory=list,
+        description="A list of path patterns of auxiliary files that contain mappings from the entries to additional properties.",
     )
 
-    property_definitions: Optional[list[PropertyDefinition]] = Field(
-        description="A place to list property metadata for fields included in the auxiliary property files. Fields not present in this list not be served by the API."
+    property_definitions: list[PropertyDefinition] = Field(
+        default_factory=list,
+        description="A place to list property metadata for fields included in the auxiliary property files. Fields not present in this list not be served by the API.",
     )
 
     @validator("entry_type")
