@@ -23,8 +23,9 @@ entries:
     - name: property_b
       title: Property B
       description: Alias for some more complicated property_b
+      type: float
       maps_to: https://schemas.optimade.org/v1.1/dft/dft_hull_distance
-    - name: description
+    - name: structure_description
       title: Entry description
       description: Provides a human-readable description for this particular entry_type
-      type: str
+      type: string
