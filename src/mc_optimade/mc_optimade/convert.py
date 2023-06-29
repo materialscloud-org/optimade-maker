@@ -133,11 +133,10 @@ def inflate_archive(archive_path: Path, data_path: Path) -> None:
     """For a given compressed file in an archive entry, decompress it and place
     the contents at the root of the archive entry file system.
 
-    Supports .bz2, .gz and .zip files, but does not yet support compressed .tar archives.
+    Supports .tar.bz2, .tar.gz and .zip files.
 
     """
-    import bz2
-    import gzip
+    import tarfile
     import zipfile
 
     real_path = (Path(archive_path) / data_path).resolve()
@@ -148,15 +147,9 @@ def inflate_archive(archive_path: Path, data_path: Path) -> None:
         with zipfile.ZipFile(real_path, "r") as zip_ref:
             zip_ref.extractall(real_path.parent)
 
-    elif real_path.suffix == ".bz2":
-        with bz2.open(real_path, "rb") as bz2_ref:
-            with open(real_path.parent / real_path.stem, "wb") as out:
-                out.write(bz2_ref.read())
-
-    elif real_path.suffix == ".gz":
-        with gzip.open(real_path, "rb") as gz_ref:
-            with open(real_path.parent / real_path.stem, "wb") as out:
-                out.write(gz_ref.read())
+    else:
+        with tarfile.open(real_path, "r") as tar:
+            tar.extractall(path=real_path.parent)
 
     return
 
