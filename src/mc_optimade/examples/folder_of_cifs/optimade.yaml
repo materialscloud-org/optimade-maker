@@ -3,6 +3,8 @@ config_version: 0.1.0
 database_description: >-
   This database contains some example CIFs.
 
+provider_prefix: mcloudarchive
+
 entries:
   - entry_type: structures
     entry_paths:

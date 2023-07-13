@@ -48,8 +48,6 @@ PROPERTY_PARSERS: dict[str, list[Callable[[Path], Any]]] = {
     ".csv": [load_csv_file],
 }
 
-PROVIDER_PREFIX = "mcarchive"
-
 ENTRY_PARSERS: dict[str, list[Callable[[Path], Any]]] = {
     "structures": [ase.io.read],
     "references": [pybtex.database.parse_file],
@@ -63,7 +61,9 @@ OPTIMADE_CONVERTERS: dict[str, list[Callable[[Any], EntryResource]]] = {
 
 
 def _construct_entry_type_info(
-    type: str, properties: list[PropertyDefinition]
+    type: str,
+    properties: list[PropertyDefinition],
+    provider_prefix: str,
 ) -> EntryInfoResource:
     """Take the provided property definitions and construct an entry info response.
 
@@ -75,7 +75,7 @@ def _construct_entry_type_info(
     """
     info: dict[str, Any] = {"formats": ["json"], "description": type}
     info["properties"] = {
-        f"_{PROVIDER_PREFIX}_{p.name}": {
+        f"_{provider_prefix}_{p.name}": {
             "description": p.description,
             "unit": p.unit,
             "type": p.type,
@@ -115,7 +115,7 @@ def convert_archive(archive_path: Path) -> Path:
 
     for entry in mc_config.entries:
         optimade_entries[entry.entry_type].extend(
-            construct_entries(archive_path, entry).values()
+            construct_entries(archive_path, entry, mc_config.provider_prefix).values()
         )
 
     property_definitions = defaultdict(list)
@@ -123,7 +123,10 @@ def convert_archive(archive_path: Path) -> Path:
         property_definitions[entry.entry_type].extend(entry.property_definitions)
 
     jsonl_path = write_optimade_jsonl(
-        archive_path, optimade_entries, property_definitions
+        archive_path,
+        optimade_entries,
+        property_definitions,
+        mc_config.provider_prefix,
     )
 
     return jsonl_path
@@ -240,6 +243,7 @@ def _parse_and_assign_properties(
     property_matches_by_file: dict[str | None, list[Path]],
     entry_type: str,
     property_definitions: list[PropertyDefinition],
+    provider_prefix: str,
 ) -> None:
     """Loop through the property matches by file and parse them into the combined
     dictionary of OPTIMADE entries.
@@ -285,11 +289,13 @@ def _parse_and_assign_properties(
         for property in all_property_fields:
             # Loop over all defined properties and assign them to the entry, setting to None if missing
             optimade_entries[id]["attributes"][
-                f"_{PROVIDER_PREFIX}_{property}"
+                f"_{provider_prefix}_{property}"
             ] = parsed_properties[id].get(property, None)
 
 
-def construct_entries(archive_path: Path, entry_config: EntryConfig) -> dict[str, dict]:
+def construct_entries(
+    archive_path: Path, entry_config: EntryConfig, provider_prefix: str
+) -> dict[str, dict]:
     """Given an archive path and an entry specification,
     loop through the provided paths and try to ingest them
     with the given entry type.
@@ -356,6 +362,7 @@ def construct_entries(archive_path: Path, entry_config: EntryConfig) -> dict[str
         property_matches_by_file,
         entry_config.entry_type,
         entry_config.property_definitions,
+        provider_prefix,
     )
 
     return optimade_entries
@@ -365,6 +372,7 @@ def write_optimade_jsonl(
     archive_path: Path,
     optimade_entries: dict[str, list[EntryResource]],
     property_definitions: dict[str, list[PropertyDefinition]],
+    provider_prefix: str,
 ) -> Path:
     """Write OPTIMADE entries to a JSONL file.
 
@@ -387,7 +395,7 @@ def write_optimade_jsonl(
 
         for entry_type in property_definitions:
             entry_info = _construct_entry_type_info(
-                entry_type, property_definitions[entry_type]
+                entry_type, property_definitions[entry_type], provider_prefix
             )
             jsonl.write(entry_info.json())
             jsonl.write("\n")
