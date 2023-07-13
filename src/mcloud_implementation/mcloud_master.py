@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 
 """
-Script that periodically runs on the MC optimade server and automatically spins up optimade APIs
-consists of multiple fairly-independent steps
+Script that periodically runs on the MC optimade server and automatically spins up
+optimade APIs consists of multiple fairly-independent steps
 """
 
-import mc_optimade
-from mc_optimade.archive.scan_records import scan_records
 from mc_optimade.archive.archive_record import ArchiveRecord
-from mc_optimade.archive.utils import get_all_records, get_parsed_records
-from mc_optimade.config import Config
+from mc_optimade.archive.utils import get_all_records
 
 from pymongo import MongoClient
 
@@ -26,7 +23,8 @@ import traceback
 
 WORKING_DIR = "/tmp/archive"
 
-# Get list of db names in mongo. The script assumes that these entries are already set up and the process is skipped
+# Get list of db names in mongo.
+# The script assumes that these entries are already set up and the process is skipped
 
 existing_dbs = MongoClient().list_database_names()
 print("Existing MongoDBs: ", existing_dbs)
@@ -44,10 +42,9 @@ print("#### ---------------------------------------------")
 
 archive_url = "https://staging-archive.materialscloud.org/"
 
-records = get_all_records(archive_url)
+records = get_all_records(archive_url, limit=9999)
 
 for record in tqdm(records, desc="Processing records"):
-
     record_id = record["id"]
     record_doi = record["metadata"]["doi"]
     record_doi_id = record_doi.split(":")[-1]
@@ -62,16 +59,17 @@ for record in tqdm(records, desc="Processing records"):
         if record.is_optimade_record():
             print(f"Record {record_id} is a OPTIMADE record.")
             if os.path.isdir(entry_folder) and len(os.listdir(entry_folder)) > 0:
-                print(f"Folder {entry_folder} exists and is not empty, skipping the download.")
+                print(
+                    f"Folder {entry_folder} exists and is not empty, skipping the download."
+                )
             else:
                 dl_start_time = time()
                 record.download_optimade_files(path=entry_folder)
                 print(f"-- Download finished! Time: {time()-dl_start_time:.2f}")
-    except Exception as e:
+    except Exception:
         print(f"#### Skipping {record_id}, error:")
         print(traceback.format_exc())
-        print("#### -----------------------------")
-
+        print("#### /error ------------------------")
 
 
 # -------------------------------------------------------------------------------
@@ -95,7 +93,6 @@ for folder_name in working_dir_contents:
 
     # assume that the entries use .yaml instead of .yml extension
     if os.path.isdir(folder_path) and "optimade.yaml" in os.listdir(folder_path):
-
         jsonl_name = "optimade.jsonl"
         # skip if the jsonl file already exists
         if jsonl_name in os.listdir(folder_path):
@@ -106,12 +103,17 @@ for folder_name in working_dir_contents:
         if folder_path in existing_dbs:
             print(f"{folder_path} skipped as corresponding MongoDB exists!")
             continue
-        
+
         conv_start_time = time()
-        jsonl_path = convert_archive(Path(folder_path))
-        print(f"-- Conversion finished! Time: {time()-conv_start_time:.2f}")
-        if jsonl_path.exists():
-            print(f"Generated {os.path.join(folder_path, jsonl_path)}!")
+        try:
+            jsonl_path = convert_archive(Path(folder_path))
+            print(f"-- Conversion finished! Time: {time()-conv_start_time:.2f}")
+            if jsonl_path.exists():
+                print(f"Generated {os.path.join(folder_path, jsonl_path)}!")
+        except Exception:
+            print(f"#### Skipping {folder_path}, error:")
+            print(traceback.format_exc())
+            print("#### /error ------------------------")
 
 # -------------------------------------------------------------------------------
 # 3. use optimade-launch to load the jsonl to mongodb and launch the container
@@ -153,16 +155,18 @@ for folder_name in working_dir_contents:
         if doi_id in existing_dbs:
             print(f"{folder_path} skipped as corresponding MongoDB exists!")
             continue
-        
+
         # write the optimade-launch-config.yml
         olaunch_config_path = os.path.join(folder_path, "optimade-launch-config.yaml")
-        with open(olaunch_config_path, 'w') as fhandle:
-            fhandle.write(olaunch_config_template.format(
-                DOI_ID=doi_id,
-                JSONL_PATH=os.path.join(folder_path, "optimade.jsonl"),
-                SOCKET_PATH=os.path.join(SOCKET_DIR, doi_id+".sock"),
-                BASE_URL=BASE_URL_BASE + doi_id
-            ))
+        with open(olaunch_config_path, "w") as fhandle:
+            fhandle.write(
+                olaunch_config_template.format(
+                    DOI_ID=doi_id,
+                    JSONL_PATH=os.path.join(folder_path, "optimade.jsonl"),
+                    SOCKET_PATH=os.path.join(SOCKET_DIR, doi_id + ".sock"),
+                    BASE_URL=BASE_URL_BASE + doi_id,
+                )
+            )
             print(f"Wrote {olaunch_config_path}!")
 
         # Call the CLI commands
@@ -170,17 +174,21 @@ for folder_name in working_dir_contents:
         print("---- optimade-launch profile create")
         profile_start_time = time()
         command = f"optimade-launch profile create --config {olaunch_config_path}"
-        output = subprocess.check_output(command, shell=True).decode('utf-8')
+        output = subprocess.check_output(command, shell=True).decode("utf-8")
         print(output)
-        print(f"-- optimade-launch profile create finished! Time: {time() - profile_start_time:.2f}")
+        print(
+            f"-- optimade-launch profile create finished! Time: {time() - profile_start_time:.2f}"
+        )
         print("----")
 
         print("---- optimade-launch server start")
         server_start_time = time()
         command = f"optimade-launch -vvv server start -p {doi_id}"
-        output = subprocess.check_output(command, shell=True).decode('utf-8')
+        output = subprocess.check_output(command, shell=True).decode("utf-8")
         print(output)
-        print(f"-- optimade-launch server start finished! Time: {time() - server_start_time:.2f}")
+        print(
+            f"-- optimade-launch server start finished! Time: {time() - server_start_time:.2f}"
+        )
         print("----")
 
 
@@ -195,8 +203,8 @@ print("#### ---------------------------------------------")
 
 from string import Template
 
-p = Path(__file__).with_name('landing_page.html.template')
-with p.open('r') as f:
+p = Path(__file__).with_name("landing_page.html.template")
+with p.open("r") as f:
     landing_page_template = Template(f.read())
 
 
@@ -207,10 +215,5 @@ for socket_file in Path(SOCKET_DIR).glob("*"):
     db_list_html += f"<li><a href='{base_url}'>{base_url}</a></li>\n"
 
 index_html_loc = "/var/www/html/index.html"
-with open(index_html_loc, 'w') as f:
+with open(index_html_loc, "w") as f:
     f.write(landing_page_template.substitute(HTML_DB_LIST_ENTRIES=db_list_html))
-
-
-
-
-
