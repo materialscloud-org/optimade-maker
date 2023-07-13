@@ -101,6 +101,7 @@ class Config(BaseModel):
     )
 
     provider_prefix: str = Field(
+        "",
         description="A provider prefix to use for custom fields served by this API.",
     )
 
