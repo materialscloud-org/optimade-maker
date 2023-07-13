@@ -1,12 +1,13 @@
 import json
-from urllib.error import HTTPError, URLError
-import requests
-import tqdm
 import os
+from urllib.error import HTTPError, URLError
+
+import requests
 
 from mc_optimade.config import Config
 
 DEFAULT_ARCHIVE_URL = "https://archive.materialscloud.org"
+
 
 class ArchiveRecord:
     """An class for Materials Cloud Archive record.
@@ -41,7 +42,7 @@ class ArchiveRecord:
         self.default_path = os.path.join("/tmp/archive", self.doi_id)
 
         self.optimade_config_name = self.check_optimade_config_name()
-        
+
     def check_optimade_config_name(self):
         """
         Check if optimade config file exists. If it doesn't, return None
@@ -52,7 +53,6 @@ class ArchiveRecord:
                 optimade_yml_name = name_candidate
                 break
         return optimade_yml_name
-
 
     def process(self):
         if not self.is_optimade_record():
@@ -72,7 +72,15 @@ class ArchiveRecord:
 
     def get_file_url(self, record_id: int, filename: str, checksum: str) -> str:
         filename = filename.replace(" ", "+")
-        url = self.archive_url + f"/record/file_stats?record_id={record_id}&checksum={checksum}&filename={filename}"
+        # original version, failing for
+        # https://staging-archive.materialscloud.org//record/file_stats?record_id=1412&checksum=md5:81b5fefab6bfa8e516d313b9cea39c66&filename=structures.zip
+        # url = (
+        #     self.archive_url
+        #     + f"/record/file_stats?record_id={record_id}&checksum={checksum}&filename={filename}"
+        # )
+        url = (
+            self.archive_url + f"/record/file?record_id={record_id}&filename={filename}"
+        )
         return url
 
     def get_record_metadata(self):
@@ -98,7 +106,7 @@ class ArchiveRecord:
 
         NOTE: the slash in the old format currently unsupported (e.g. can't make a folder,
         or docker container), but these entries any way don't contain optimade.yml, so it
-        should be safe to ignore this for now. 
+        should be safe to ignore this for now.
         """
         return self.metadata["doi"].split(":")[-1]
 
@@ -137,10 +145,10 @@ class ArchiveRecord:
         """
         Download all files from the optimade file list.
         """
-        import tempfile
-        from .utils import download_file, extract
-        import shutil
         import os
+        import shutil
+
+        from .utils import download_file, extract
 
         if not path:
             path = self.default_path
@@ -151,13 +159,17 @@ class ArchiveRecord:
         os.makedirs(path)
 
         # download optimade.yml/yaml and rename to "yml->yaml"
-        file_url = self.get_file_url(self.id, self.optimade_config_name, self.files[self.optimade_config_name])
+        file_url = self.get_file_url(
+            self.id, self.optimade_config_name, self.files[self.optimade_config_name]
+        )
         download_file(file_url, path, rename="optimade.yaml")
 
         # download files in record
         for entry in self.mc_config.entries:
-            for entry_path in entry.entry_paths:
-                fname = entry_path.file
+            list_of_files = [path.file for path in entry.entry_paths]
+            if hasattr(entry, "property_paths"):
+                list_of_files += [path.file for path in entry.property_paths]
+            for fname in list_of_files:
                 file_url = self.get_file_url(self.id, fname, self.files[fname])
                 file_path = download_file(file_url, path)
                 if extract_files:

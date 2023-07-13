@@ -16,16 +16,16 @@ requests.packages.urllib3.disable_warnings()  # type: ignore
 DEFAULT_ARCHIVE_URL = "https://archive.materialscloud.org"
 
 
-def get_all_records(base_url: str = DEFAULT_ARCHIVE_URL) -> dict:
+def get_all_records(base_url: str = DEFAULT_ARCHIVE_URL, limit: int = 9999) -> dict:
     """
     Get all the records in the Materials Cloud Archive.
     """
-    url = base_url + "/api/records/?sort=mostrecent&page=1&size=9999"
+    url = base_url + f"/api/records/?sort=mostrecent&page=1&size={limit}"
     r = requests.get(url, allow_redirects=True, verify=False)
     s = json.loads(r.content.decode("utf-8"))
-    recrods = s["hits"]["hits"]
-    print("There are {} records in the Materials Cloud Archive.".format(len(recrods)))
-    return recrods
+    records = s["hits"]["hits"]
+    print("There are {} records in the Materials Cloud Archive.".format(len(records)))
+    return records
 
 
 def get_parsed_records() -> list:
@@ -34,12 +34,12 @@ def get_parsed_records() -> list:
     old_records = []
     for _, _, files in os.walk("optimade_entries"):
         for f in files:
-            f = f.rsplit(".", 1)
-            old_records.append(f[0])
+            fs = f.rsplit(".", 1)
+            old_records.append(fs[0])
     return old_records
 
 
-def download_file(url: str, tmpdir: str, rename: str = None) -> None:
+def download_file(url: str, tmpdir: str, rename: str = "") -> str:
     """
     Downloads file
     """
@@ -48,7 +48,7 @@ def download_file(url: str, tmpdir: str, rename: str = None) -> None:
         response = urlopen(url)
 
         filename = os.path.basename(url).split("filename=")[1]
-        if rename:
+        if len(rename) > 0:
             filename = rename
 
         fpath = os.path.join(tmpdir, filename)
@@ -66,6 +66,7 @@ def download_file(url: str, tmpdir: str, rename: str = None) -> None:
         print("HTTP Error: {} {}".format(e.code, url))
     except URLError as e:
         print("URL Error: {} {}".format(e.reason, url))
+    return ""
 
 
 def extract(path: str, tmpdir: str) -> None:
