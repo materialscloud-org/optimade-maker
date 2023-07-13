@@ -100,6 +100,10 @@ class Config(BaseModel):
         description="A list of entry configurations for each entry type."
     )
 
+    provider_prefix: str = Field(
+        description="A provider prefix to use for custom fields served by this API.",
+    )
+
     @validator("entries")
     def check_one_entry_per_type(cls, v):
         if len({e.entry_type for e in v}) != len(v):

@@ -54,10 +54,10 @@ def test_example_archive_structure_id(tmp_path):
 
             if structure_dict["id"] == STRUCT_ID:
                 assert structure_dict["id"] == STRUCT_ID
-                assert structure_dict["attributes"]["_mcarchive_energy"] == -0.54
-                assert structure_dict["attributes"]["_mcarchive_property_b"] == 0.99
+                assert structure_dict["attributes"]["_mcloudarchive_energy"] == -0.54
+                assert structure_dict["attributes"]["_mcloudarchive_property_b"] == 0.99
                 assert (
-                    structure_dict["attributes"]["_mcarchive_structure_description"]
+                    structure_dict["attributes"]["_mcloudarchive_structure_description"]
                     == "some description"
                 )
                 break
