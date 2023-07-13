@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import toml
 import sys
+import json
 from dataclasses import dataclass, field, asdict
 from docker.models.containers import Container
 
@@ -16,6 +17,7 @@ DEFAULT_IMAGE = "ghcr.io/materials-consortia/optimade:0.24.0"
 DEFAULT_MONGO_URI = "mongodb://127.0.0.1:27017"
 DEFAULT_BASE_URL = "http://localhost"
 DEFAULT_INDEX_BASE_URL = "http://localhost"
+DEFAULT_PROVIDER = "{\"prefix\":\"defualt\",\"name\":\"Materials Cloud Archive\",\"description\":\"Short description for My Organization\",\"homepage\":\"https://example.org\"}"
 
 DEFAULT_NAME = "default"
 
@@ -40,7 +42,7 @@ class Profile:
     unix_sock: str | None = None
     optimade_base_url: str | None = DEFAULT_BASE_URL
     optimade_index_base_url: str | None = DEFAULT_INDEX_BASE_URL
-    optimade_provider: str | None = None
+    optimade_provider: str | None = DEFAULT_PROVIDER
     
     def __post_init__(self):
         # default port is dependent on unix_sock
@@ -57,7 +59,7 @@ class Profile:
             self.mongo_uri = self.mongo_uri.replace("localhost", "host.docker.internal")
         if "127.0.0.1" in self.mongo_uri:
             self.mongo_uri = self.mongo_uri.replace("127.0.0.1", "host.docker.internal")
-                
+
         return {
             "OPTIMADE_CONFIG_FILE": None,
             "optimade_insert_test_data": False,
@@ -69,7 +71,7 @@ class Profile:
             "optimade_page_limit_max": 100,
             "optimade_base_url": self.optimade_base_url,
             "optimade_index_base_url": self.optimade_index_base_url,
-            "optimade_provider": "{\"prefix\":\"myorg\",\"name\":\"Materials Cloud Archive\",\"description\":\"Short description for My Organization\",\"homepage\":\"https://example.org\"}",
+            "optimade_provider": self.optimade_provider,
         }
         
     def dumps(self) -> str:

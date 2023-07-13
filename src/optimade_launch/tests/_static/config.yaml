@@ -5,3 +5,10 @@ jsonl_paths:
 mongo_uri: mongodb://localhost:27017
 db_name: te-st
 unix_sock: /var/lib/optimade-sockets/te-st.sock
+optimade_base_url: http://localhost
+optimade_index_base_url: http://localhost
+optimade_provider:
+   prefix: "myorgtest"
+   name: "My Organization test"
+   description: "My Organization's OPTIMADE provider test"
+   homepage: "https://myorg-test.org"

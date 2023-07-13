@@ -92,6 +92,13 @@ jsonl:
    - /var/lib/optimade-archive/<parsed_doi>.jsonl
 mongo_uri: mongodb://localhost:27017
 db_name: <parsed_doi>
+optimade_base_url: http://localhost
+optimade_index_base_url: http://localhost
+optimade_provider:
+   prefix: "myorg"
+   name: "My Organization"
+   description: "My Organization's OPTIMADE provider"
+   homepage: "https://myorg.org"
 ```
 
 ```console

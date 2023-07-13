@@ -366,6 +366,8 @@ def edit_profile(app_state, profile):
 @click.pass_context
 def create_profile(ctx, app_state, port: int | None, mongo_uri: str, jsonl: list, db_name, config, profile: str | None = None):
     """Add a new Optimade profile to the configuration."""
+    import json
+
     if config:
         import yaml
         
@@ -381,8 +383,6 @@ def create_profile(ctx, app_state, port: int | None, mongo_uri: str, jsonl: list
             "port": None,
         }
         
-    print(params)
-            
     try:
         app_state.config.get_profile(profile)
     except ValueError:
@@ -393,18 +393,25 @@ def create_profile(ctx, app_state, port: int | None, mongo_uri: str, jsonl: list
     if port:
         params["port"] = port
 
+    # if params contains optimade_provide, the double/single quotes need to escaped the input the will be a pure string
+    if "optimade_provider" in params:
+        provider_str = json.dumps(params["optimade_provider"])
+        params["optimade_provider"] = provider_str
+
     try:
         new_profile = Profile(
             **params,
         )
+        # import ipdb; ipdb.set_trace()
     except ValueError as error:  # invalid profile name
         raise click.ClickException(error)
 
     app_state.config.profiles.append(new_profile)
     app_state.save_config()
     click.echo(f"Created profile '{profile}'.")
-    # if click.confirm("Do you want to edit it now?", default=True):
-    #     ctx.invoke(edit_profile, profile=profile)
+    if not config:
+        if click.confirm("Do you want to edit it now?", default=True):
+            ctx.invoke(edit_profile, profile=profile)
         
 @profile.command("remove")
 @click.argument("profile")
