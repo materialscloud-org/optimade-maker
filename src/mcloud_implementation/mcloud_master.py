@@ -140,6 +140,11 @@ db_name: {DOI_ID}
 unix_sock: {SOCKET_PATH}
 optimade_base_url: {BASE_URL}
 optimade_index_base_url: http://localhost
+optimade_provider:
+   prefix: "mcloudarchive"
+   name: "Materials Cloud Archive"
+   description: "OPTIMADE provider for Materials Cloud Archive"
+   homepage: "https://archive.materialscloud.org"
 """
 
 working_dir_contents = os.listdir(WORKING_DIR)
