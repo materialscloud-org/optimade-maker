@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 import toml
-import sys
-import json
 from dataclasses import dataclass, field, asdict
 from docker.models.containers import Container
 
-from .core import LOGGER
 
 CONTAINER_PREFIX = "optimade"
 
@@ -17,12 +14,14 @@ DEFAULT_IMAGE = "ghcr.io/materials-consortia/optimade:0.24.0"
 DEFAULT_MONGO_URI = "mongodb://127.0.0.1:27017"
 DEFAULT_BASE_URL = "http://localhost"
 DEFAULT_INDEX_BASE_URL = "http://localhost"
-DEFAULT_PROVIDER = "{\"prefix\":\"defualt\",\"name\":\"Materials Cloud Archive\",\"description\":\"Short description for My Organization\",\"homepage\":\"https://example.org\"}"
+DEFAULT_PROVIDER = '{"prefix":"defualt","name":"Materials Cloud Archive","description":"Short description for My Organization","homepage":"https://example.org"}'  # noqa
 
 DEFAULT_NAME = "default"
 
+
 def _default_port() -> int:
     return DEFAULT_PORT
+
 
 def _get_configured_host_port(container: Container) -> int | None:
     try:
@@ -31,6 +30,7 @@ def _get_configured_host_port(container: Container) -> int | None:
     except (KeyError, IndexError, ValueError):
         pass
     return None
+
 
 @dataclass
 class Profile:
@@ -43,18 +43,18 @@ class Profile:
     optimade_base_url: str | None = DEFAULT_BASE_URL
     optimade_index_base_url: str | None = DEFAULT_INDEX_BASE_URL
     optimade_provider: str | None = DEFAULT_PROVIDER
-    
+    optimade_validate_api_response: bool = False
+
     def __post_init__(self):
         # default port is dependent on unix_sock
         if self.port is None and self.unix_sock is None:
             self.port = _default_port()
-    
+
     def container_name(self) -> str:
         return f"{CONTAINER_PREFIX}_{self.name}"
-    
+
     def environment(self) -> dict:
-        """Return the environment variables for start the container.
-        """
+        """Return the environment variables for start the container."""
         if "localhost" in self.mongo_uri:
             self.mongo_uri = self.mongo_uri.replace("localhost", "host.docker.internal")
         if "127.0.0.1" in self.mongo_uri:
@@ -72,11 +72,11 @@ class Profile:
             "optimade_base_url": self.optimade_base_url,
             "optimade_index_base_url": self.optimade_index_base_url,
             "optimade_provider": self.optimade_provider,
+            "optimade_validate_api_response": self.optimade_validate_api_response,
         }
-        
+
     def dumps(self) -> str:
-        """Dump the profile to a TOML string.
-        """
+        """Dump the profile to a TOML string."""
         return toml.dumps({k: v for k, v in asdict(self).items() if k != "name"})
 
     @classmethod
