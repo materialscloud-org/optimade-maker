@@ -3,9 +3,9 @@ name = "mc_optimade"
 version = "0.1"
 
 dependencies = [
-    "pydantic",
-    "optimade[ase]",
-    "pyyaml",
+    "pydantic<2.0",
+    "optimade[ase]~=0.25",
+    "pyyaml~=6.0",
     "pandas",
     "pybtex",
     "tqdm",
