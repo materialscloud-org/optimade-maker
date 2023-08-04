@@ -13,7 +13,7 @@ requires-python = ">=3.9"
 dynamic = ["version", "description"]
 
 dependencies = [
-    "optimade[server]~=0.24.0",
+    "optimade[server]~=0.25.0",
     "requests",
     "click-spinner~=0.1.0",
     "docker~=5.0.2",
