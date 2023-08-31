@@ -52,7 +52,7 @@ class ParsedFiles(BaseModel):
         description="The path to an archive or file to be unzipped/decompressed."
     )
 
-    matches: Optional[list[str]] = Field(
+    matches: list[str] = Field(
         description="A list of matches to be used to filter the file contents. Each match can use simple '*' wildcard syntax.",
         examples=[["structures/*.cif", "relaxed-structures/1.cif"]],
     )
@@ -86,6 +86,21 @@ class EntryConfig(BaseModel):
         return v
 
 
+class JSONLConfig(BaseModel):
+    """A description of a single JSON lines file that describes
+    the target API.
+
+    """
+
+    file: Optional[str] = Field(
+        description="The archive filename containing the JSONL data to be parsed."
+    )
+
+    jsonl_path: str = Field(
+        description="The path of the JSON-L file within the archive (or directly in the entry, if `archive_file` is `None`)."
+    )
+
+
 class Config(BaseModel):
     """This class describes the `optimade.yaml` file
     that a user can provide for each MCloud entry.
@@ -101,7 +116,7 @@ class Config(BaseModel):
         description="A human-readable description of the overall database to be provided alongside the data in the API."
     )
 
-    entries: list[EntryConfig] = Field(
+    entries: list[EntryConfig] | JSONLConfig = Field(
         description="A list of entry configurations for each entry type."
     )
 
