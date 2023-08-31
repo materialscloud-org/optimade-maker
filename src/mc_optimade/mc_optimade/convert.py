@@ -13,7 +13,7 @@ import tqdm
 from optimade.models import EntryInfoResource, EntryResource
 from optimade.server.schemas import ENTRY_INFO_SCHEMAS, retrieve_queryable_properties
 
-from .config import Config, EntryConfig, ParsedFiles, PropertyDefinition
+from .config import Config, EntryConfig, JSONLConfig, ParsedFiles, PropertyDefinition
 from .parsers import ENTRY_PARSERS, OPTIMADE_CONVERTERS, PROPERTY_PARSERS, TYPE_MAP
 
 
@@ -62,6 +62,13 @@ def convert_archive(archive_path: Path) -> Path:
 
     # load the config from the root of the archive
     mc_config = Config.from_file(archive_path / "optimade.yaml")
+
+    # if the config specifies just a JSON-L, then extract any archives
+    # and return the JSONL path
+    if isinstance(mc_config.entries, JSONLConfig):
+        if mc_config.entries.archive_file is not None:
+            inflate_archive(Path(archive_path), Path(mc_config.entries.archive_file))
+        return Path(archive_path) / mc_config.entries.jsonl_path
 
     # first, decompress any provided data paths
     data_paths: set[Path] = set()
