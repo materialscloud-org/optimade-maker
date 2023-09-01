@@ -6,5 +6,4 @@ database_description: >-
 provider_prefix: mcloudarchive
 
 entries:
-  - jsonl_file: archive.zip
-    jsonl_path: example.jsonl
+  jsonl_path: example.jsonl
