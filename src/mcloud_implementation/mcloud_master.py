@@ -19,12 +19,19 @@ from time import time
 
 import traceback
 import click
+from datetime import datetime
+from urllib.parse import urljoin
 
+BASE_URL = "https://dev-optimade.materialscloud.org"
+BASE_URL_INDEX = urljoin(BASE_URL, "/index")
+
+ARCHIVE_URL = "https://staging-archive.materialscloud.org/"
 
 DOWNLOAD_DIR = "/tmp/archive"
 JSONL_NAME = "optimade.jsonl"
 SOCKET_DIR = "/home/ubuntu/optimade-sockets/"
-BASE_URL_BASE = "http://dev-optimade.materialscloud.org/archive/"
+
+METADB_NAME = "metadata"
 
 mongo_client = MongoClient("localhost", 27017)
 
@@ -47,6 +54,36 @@ def _get_optimade_containers():
     ]
 
 
+def _add_record_metadata_to_mongodb(doi_id, data):
+    collection = mongo_client[METADB_NAME]["entries"]
+    filter_criteria = {"doi_id": doi_id}
+    data["doi_id"] = doi_id
+    # Insert if not exists or update if exists
+    collection.update_one(filter_criteria, {"$set": data}, upsert=True)
+
+
+def _get_record_metadata_processed(doi_id):
+    collection = mongo_client[METADB_NAME]["entries"]
+    filter_criteria = {"doi_id": doi_id}
+
+    result = collection.find_one(filter_criteria)
+
+    if result:
+        mcid = result["metadata"]["mcid"]
+        date_format = "%b %d, %Y, %H:%M:%S"
+        return {
+            "title": result["metadata"]["title"],
+            "version": result["metadata"]["version"],
+            "mcid": mcid,
+            "url": f"{ARCHIVE_URL}record/{mcid}",
+            "publication_date": datetime.strptime(
+                result["metadata"]["publication_date"], date_format
+            ),
+        }
+
+    return {}
+
+
 def _download_entries_from_archive():
     """
     1.
@@ -65,9 +102,7 @@ def _download_entries_from_archive():
     existing_dbs = _get_optimade_mongodbs(mongo_client)
     print("Existing MongoDBs: ", existing_dbs)
 
-    archive_url = "https://staging-archive.materialscloud.org/"
-
-    records = get_all_records(archive_url, limit=9999)
+    records = get_all_records(ARCHIVE_URL, limit=9999)
 
     for record in tqdm(records, desc="Processing records"):
         record_id = record["id"]
@@ -75,15 +110,20 @@ def _download_entries_from_archive():
         doi_id = doi.split(":")[-1]
         entry_folder = os.path.join(DOWNLOAD_DIR, doi_id)
 
-        if _mongodb_name(doi_id) in existing_dbs:
-            print(f"{record_id}/{doi_id} skipped as corresponding MongoDB exists!")
-            continue
-
         try:
-            record = ArchiveRecord(record_id, archive_url=archive_url)
-            if record.is_optimade_record():
+            recordArc = ArchiveRecord(record_id, archive_url=ARCHIVE_URL)
+            if recordArc.is_optimade_record():
                 print("------------------------------------------------")
                 print(f"Record {record_id}/{doi_id} is an OPTIMADE record.")
+
+                _add_record_metadata_to_mongodb(doi_id, record)
+
+                if _mongodb_name(doi_id) in existing_dbs:
+                    print(
+                        f"{record_id}/{doi_id} skipped as corresponding"
+                        + "MongoDB exists!"
+                    )
+                    continue
                 if os.path.isdir(entry_folder) and len(os.listdir(entry_folder)) > 0:
                     print(
                         f"Folder {entry_folder} exists and is not empty,"
@@ -91,7 +131,7 @@ def _download_entries_from_archive():
                     )
                 else:
                     time_start = time()
-                    record.download_optimade_files(path=entry_folder)
+                    recordArc.download_optimade_files(path=entry_folder)
                     print(f"-- Download finished! Time: {time()-time_start:.2f}")
         except Exception:
             print(f"Skipping {record_id}/{doi_id}, error:")
@@ -229,12 +269,12 @@ mongo_uri: mongodb://localhost:27017
 db_name: {DB_NAME}
 unix_sock: {SOCKET_PATH}
 optimade_base_url: {BASE_URL}
-optimade_index_base_url: http://dev-optimade.materialscloud.org/index
+optimade_index_base_url: {BASE_URL_INDEX}
 optimade_provider:
     prefix: "mcloudarchive"
     name: "Materials Cloud Archive"
     description: "OPTIMADE provider for Materials Cloud Archive"
-    homepage: "https://archive.materialscloud.org"
+    homepage: {ARCHIVE_URL}
 """
 
     for db in existing_dbs:
@@ -252,7 +292,9 @@ optimade_provider:
                         DOI_ID=doi_id,
                         DB_NAME=_mongodb_name(doi_id),
                         SOCKET_PATH=os.path.join(SOCKET_DIR, doi_id + ".sock"),
-                        BASE_URL=BASE_URL_BASE + doi_id,
+                        BASE_URL=urljoin(BASE_URL, f"archive/{doi_id}"),
+                        BASE_URL_INDEX=BASE_URL_INDEX,
+                        ARCHIVE_URL=ARCHIVE_URL,
                     )
                 )
                 print(f"Wrote {olaunch_config_path}!")
@@ -290,8 +332,8 @@ def _update_index():
             "type": "links",
             "name": "MC Archive index meta-db",
             "description": "Materials Cloud Archive index meta-database",
-            "base_url": "https://dev-optimade.materialscloud.org/index",
-            "homepage": "https://archive.materialscloud.org",
+            "base_url": BASE_URL_INDEX,
+            "homepage": ARCHIVE_URL,
             "link_type": "root",
         },
     ]
@@ -303,8 +345,8 @@ def _update_index():
             "type": "links",
             "name": f"MC Archive {doi_id}",
             "description": f"OPTIMADE API serving the Materials Cloud Archive entry {doi_id}",  # noqa
-            "base_url": f"https://dev-optimade.materialscloud.org/archive/{doi_id}",
-            "homepage": "x",
+            "base_url": urljoin(BASE_URL, f"/archive/{doi_id}"),
+            "homepage": _get_record_metadata_processed(doi_id).get("url"),
             "link_type": "child",
             "aggregate": "ok",
         }
@@ -354,18 +396,40 @@ def _update_landing_page():
     with p.open("r") as f:
         landing_page_template = Template(f.read())
 
-    db_list_html = ""
+    rows = []
     for socket_file in Path(SOCKET_DIR).glob("*"):
         doi_id = socket_file.stem
-        base_url = BASE_URL_BASE + doi_id
-        db_list_html += f"<li><a href='{base_url}'>{base_url}</a></li>\n"
+        metadata = _get_record_metadata_processed(doi_id)
+        rows.append([metadata.get("publication_date"), doi_id, metadata])
+
+    # sort in ascending order by publication date
+    # (entries without a date go to the end)
+    rows.sort(key=lambda x: (x[0] is None, x))
+
+    db_list_html = ""
+    for row in rows:
+        date, doi_id, metadata = row
+        base_url = urljoin(BASE_URL, f"archive/{doi_id}")
+        metadata_html = ""
+        if date:
+            metadata_html = f"<a href='{metadata.get('url')}'>"
+            metadata_html += date.strftime("%Y.%m.%d") + " "
+            metadata_html += (
+                f"{metadata.get('title')} (version v{metadata.get('version')})"
+            )
+            metadata_html += "</a>; "
+
+        db_list_html += (
+            f"<li>{metadata_html}OPTIMADE endpoint:"
+            + f"<a href='{base_url}'>{base_url}</a></li>\n"
+        )
 
     index_html_loc = "/var/www/html/index.html"
     with open(index_html_loc, "w") as f:
         f.write(
             landing_page_template.substitute(
                 HTML_DB_LIST_ENTRIES=db_list_html,
-                INDEX_BASE_URL="https://dev-optimade.materialscloud.org/index",
+                INDEX_BASE_URL=BASE_URL_INDEX,
             )
         )
 
@@ -374,16 +438,16 @@ def _update_landing_page():
 @click.option("--skip_download", is_flag=True)
 @click.option("--skip_convert", is_flag=True)
 @click.option("--skip_mongo_inject", is_flag=True)
-@click.option("--skip_container_start", is_flag=True)
-@click.option("--skip_index_update", is_flag=True)
-@click.option("--skip_landing_update", is_flag=True)
+@click.option("--skip_containers", is_flag=True)
+@click.option("--skip_index", is_flag=True)
+@click.option("--skip_landing", is_flag=True)
 def cli(
     skip_download,
     skip_convert,
     skip_mongo_inject,
-    skip_container_start,
-    skip_index_update,
-    skip_landing_update,
+    skip_containers,
+    skip_index,
+    skip_landing,
 ):
     """
     Set up the Materials Cloud Archive OPTIMADE APIs.
@@ -395,11 +459,11 @@ def cli(
         _convert_entries_to_jsonl()
     if not skip_mongo_inject:
         _populate_mongodbs()
-    if not skip_container_start:
+    if not skip_containers:
         _start_containers()
-    if not skip_index_update:
+    if not skip_index:
         _update_index()
-    if not skip_landing_update:
+    if not skip_landing:
         _update_landing_page()
 
 
