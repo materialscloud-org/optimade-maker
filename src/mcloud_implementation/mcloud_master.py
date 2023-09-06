@@ -2,13 +2,12 @@
 
 """
 Script that periodically runs on the MC optimade server and automatically spins up
-optimade APIs consists of multiple fairly-independent steps
+optimade APIs; consists of multiple fairly-independent steps
 """
 
-from mc_optimade.archive.archive_record import ArchiveRecord
-from mc_optimade.archive.utils import get_all_records
-
 from pymongo import MongoClient
+
+import docker
 
 from tqdm import tqdm
 
@@ -19,206 +18,390 @@ from pathlib import Path
 from time import time
 
 import traceback
+import click
 
 
-WORKING_DIR = "/tmp/archive"
-
-# Get list of db names in mongo.
-# The script assumes that these entries are already set up and the process is skipped
-
-existing_dbs = MongoClient().list_database_names()
-print("Existing MongoDBs: ", existing_dbs)
-
-# -------------------------------------------------------------------------------
-# 1. go through each archive entry and download them if they're optimade-related,
-#    to "/tmp/archive/ab-cd", where "ab-cd" is the doi identifier.
-#    skipped if
-#    * the folder exists
-#    * the mongodb has a database with name "ab-cd"
-
-print("#### ---------------------------------------------")
-print("#### 1. Checking MC archive")
-print("#### ---------------------------------------------")
-
-archive_url = "https://staging-archive.materialscloud.org/"
-
-records = get_all_records(archive_url, limit=9999)
-
-for record in tqdm(records, desc="Processing records"):
-    record_id = record["id"]
-    record_doi = record["metadata"]["doi"]
-    record_doi_id = record_doi.split(":")[-1]
-    entry_folder = os.path.join(WORKING_DIR, record_doi_id)
-
-    if record_doi_id in existing_dbs:
-        print(f"{record_doi} skipped as corresponding MongoDB exists!")
-        continue
-
-    try:
-        record = ArchiveRecord(record_id, archive_url=archive_url)
-        if record.is_optimade_record():
-            print(f"Record {record_id} is a OPTIMADE record.")
-            if os.path.isdir(entry_folder) and len(os.listdir(entry_folder)) > 0:
-                print(
-                    f"Folder {entry_folder} exists and is not empty, skipping the download."
-                )
-            else:
-                dl_start_time = time()
-                record.download_optimade_files(path=entry_folder)
-                print(f"-- Download finished! Time: {time()-dl_start_time:.2f}")
-    except Exception:
-        print(f"#### Skipping {record_id}, error:")
-        print(traceback.format_exc())
-        print("#### /error ------------------------")
-
-
-# -------------------------------------------------------------------------------
-# 2. check each folder in the WORKING_DIR and convert them to jsonl
-#    skipped if:
-#    * mongodb exists
-#    * jsonl exists
-
-print("#### ---------------------------------------------")
-print("#### 2. Converting downloaded entries to jsonl")
-print("#### ---------------------------------------------")
-
-from mc_optimade.convert import convert_archive
-from pathlib import Path
-
-working_dir_contents = os.listdir(WORKING_DIR)
-
-for folder_name in working_dir_contents:
-    # note: the folder name is the DOI identifier.
-    folder_path = os.path.join(WORKING_DIR, folder_name)
-
-    # assume that the entries use .yaml instead of .yml extension
-    if os.path.isdir(folder_path) and "optimade.yaml" in os.listdir(folder_path):
-        jsonl_name = "optimade.jsonl"
-        # skip if the jsonl file already exists
-        if jsonl_name in os.listdir(folder_path):
-            print(f"Skipping {folder_path}! {jsonl_name} already exists.")
-            continue
-
-        # skip if the mongodb already exists
-        if folder_path in existing_dbs:
-            print(f"{folder_path} skipped as corresponding MongoDB exists!")
-            continue
-
-        conv_start_time = time()
-        try:
-            jsonl_path = convert_archive(Path(folder_path))
-            print(f"-- Conversion finished! Time: {time()-conv_start_time:.2f}")
-            if jsonl_path.exists():
-                print(f"Generated {os.path.join(folder_path, jsonl_path)}!")
-        except Exception:
-            print(f"#### Skipping {folder_path}, error:")
-            print(traceback.format_exc())
-            print("#### /error ------------------------")
-
-# -------------------------------------------------------------------------------
-# 3. use optimade-launch to load the jsonl to mongodb and launch the container
-#    skipped if:
-#    * mongodb database exists
-#    * todo: what if db exists but container doesn't?
-
-print("#### ---------------------------------------------")
-print("#### 3. populating mongoDB and starting containers")
-print("#### ---------------------------------------------")
-
-import subprocess
-
+DOWNLOAD_DIR = "/tmp/archive"
+JSONL_NAME = "optimade.jsonl"
 SOCKET_DIR = "/home/ubuntu/optimade-sockets/"
 BASE_URL_BASE = "http://dev-optimade.materialscloud.org/archive/"
 
-olaunch_config_template = """
----
-name: {DOI_ID}
-jsonl_paths:
-   - {JSONL_PATH}
-mongo_uri: mongodb://localhost:27017
-db_name: {DOI_ID}
-unix_sock: {SOCKET_PATH}
-optimade_base_url: {BASE_URL}
-optimade_index_base_url: http://localhost
-optimade_provider:
-   prefix: "mcloudarchive"
-   name: "Materials Cloud Archive"
-   description: "OPTIMADE provider for Materials Cloud Archive"
-   homepage: "https://archive.materialscloud.org"
-"""
+mongo_client = MongoClient("localhost", 27017)
 
-working_dir_contents = os.listdir(WORKING_DIR)
 
-for folder_name in working_dir_contents:
-    # note: the folder name is the DOI identifier.
-    folder_path = os.path.join(WORKING_DIR, folder_name)
+def _mongodb_name(doi_id):
+    return f"optimade_{doi_id}"
 
-    if os.path.isdir(folder_path) and "optimade.jsonl" in os.listdir(folder_path):
-        doi_id = folder_name
 
-        # skip if the mongodb already exists
-        if doi_id in existing_dbs:
-            print(f"{folder_path} skipped as corresponding MongoDB exists!")
+def _get_optimade_mongodbs(mongo_client):
+    return [
+        db for db in mongo_client.list_database_names() if db.startswith("optimade_")
+    ]
+
+
+def _get_optimade_containers():
+    return [
+        c.name
+        for c in docker.DockerClient().containers.list()
+        if c.name.startswith("optimade_")
+    ]
+
+
+def _download_entries_from_archive():
+    """
+    1.
+    Go through each archive entry and if they're optimade-related, download them
+    to <path>/ab-cd, where "ab-cd" is the doi identifier.
+    skipped if
+    * the subfolder already exists
+    * the mongodb has a database with name "ab-cd"
+    """
+    print("#### ---------------------------------------------")
+    print("#### Checking MC archive")
+    print("#### ---------------------------------------------")
+    from mc_optimade.archive.archive_record import ArchiveRecord
+    from mc_optimade.archive.utils import get_all_records
+
+    existing_dbs = _get_optimade_mongodbs(mongo_client)
+    print("Existing MongoDBs: ", existing_dbs)
+
+    archive_url = "https://staging-archive.materialscloud.org/"
+
+    records = get_all_records(archive_url, limit=9999)
+
+    for record in tqdm(records, desc="Processing records"):
+        record_id = record["id"]
+        doi = record["metadata"]["doi"]
+        doi_id = doi.split(":")[-1]
+        entry_folder = os.path.join(DOWNLOAD_DIR, doi_id)
+
+        if _mongodb_name(doi_id) in existing_dbs:
+            print(f"{record_id}/{doi_id} skipped as corresponding MongoDB exists!")
             continue
 
-        # write the optimade-launch-config.yml
-        olaunch_config_path = os.path.join(folder_path, "optimade-launch-config.yaml")
-        with open(olaunch_config_path, "w") as fhandle:
-            fhandle.write(
-                olaunch_config_template.format(
-                    DOI_ID=doi_id,
-                    JSONL_PATH=os.path.join(folder_path, "optimade.jsonl"),
-                    SOCKET_PATH=os.path.join(SOCKET_DIR, doi_id + ".sock"),
-                    BASE_URL=BASE_URL_BASE + doi_id,
+        try:
+            record = ArchiveRecord(record_id, archive_url=archive_url)
+            if record.is_optimade_record():
+                print("------------------------------------------------")
+                print(f"Record {record_id}/{doi_id} is an OPTIMADE record.")
+                if os.path.isdir(entry_folder) and len(os.listdir(entry_folder)) > 0:
+                    print(
+                        f"Folder {entry_folder} exists and is not empty,"
+                        + "skipping the download."
+                    )
+                else:
+                    time_start = time()
+                    record.download_optimade_files(path=entry_folder)
+                    print(f"-- Download finished! Time: {time()-time_start:.2f}")
+        except Exception:
+            print(f"Skipping {record_id}/{doi_id}, error:")
+            print(traceback.format_exc())
+
+
+def _convert_entries_to_jsonl():
+    """
+    check each subfolder in <path> and convert them to jsonl
+    skipped if:
+    * jsonl exists
+    * mongodb exists
+    """
+
+    print("#### ---------------------------------------------")
+    print("#### Converting downloaded entries to jsonl")
+    print("#### ---------------------------------------------")
+
+    from mc_optimade.convert import convert_archive
+    from pathlib import Path
+
+    existing_dbs = _get_optimade_mongodbs(mongo_client)
+    print("Existing MongoDBs: ", existing_dbs)
+
+    working_dir_contents = os.listdir(DOWNLOAD_DIR)
+
+    for folder_name in working_dir_contents:
+        doi_id = folder_name
+        folder_path = os.path.join(DOWNLOAD_DIR, folder_name)
+
+        print("------------------------------------------------")
+        print(doi_id)
+
+        if _mongodb_name(doi_id) in existing_dbs:
+            print(f"{doi_id} skipped as corresponding MongoDB exists!")
+            continue
+
+        if os.path.isdir(folder_path):
+            if "optimade.yaml" not in os.listdir(folder_path):
+                print(f"Skipping {folder_path}! optimade.yaml is missing.")
+                continue
+
+            # skip if the jsonl file already exists
+            if JSONL_NAME in os.listdir(folder_path):
+                print(f"Skipping {folder_path}! {JSONL_NAME} already exists.")
+                continue
+
+            time_start = time()
+            try:
+                jsonl_path = convert_archive(Path(folder_path))
+                print(f"-- Conversion finished! Time: {time()-time_start:.2f}")
+                if jsonl_path.exists():
+                    print(f"Generated {os.path.join(folder_path, jsonl_path)}!")
+            except Exception:
+                print(f"Skipping {folder_path}, error:")
+                print(traceback.format_exc())
+
+
+def _populate_mongodbs():
+    """
+    check each jsonl file in subfolders of <path> and populate Mongo databases
+    skipped if:
+    * mongodb exists
+    """
+
+    print("#### ---------------------------------------------")
+    print("#### Injecting the jsonl data to mongoDB")
+    print("#### ---------------------------------------------")
+
+    from optimade_launch.database import inject_data
+
+    existing_dbs = _get_optimade_mongodbs(mongo_client)
+    print("Existing MongoDBs: ", existing_dbs)
+
+    working_dir_contents = os.listdir(DOWNLOAD_DIR)
+
+    for folder_name in working_dir_contents:
+        doi_id = folder_name
+        folder_path = os.path.join(DOWNLOAD_DIR, folder_name)
+
+        print("------------------------------------------------")
+        print(doi_id)
+
+        if _mongodb_name(doi_id) in existing_dbs:
+            print(f"{doi_id} skipped as corresponding MongoDB exists!")
+            continue
+
+        if os.path.isdir(folder_path):
+            if JSONL_NAME not in os.listdir(folder_path):
+                print(f"{doi_id} skipped as {JSONL_NAME} is missing!")
+                continue
+
+            time_start = time()
+            try:
+                inject_data(
+                    mongo_client,
+                    os.path.join(folder_path, JSONL_NAME),
+                    _mongodb_name(doi_id),
                 )
+                print(
+                    f"-- MongoDB added: {_mongodb_name(doi_id)}!"
+                    + f"Time: {time()-time_start:.2f}"
+                )
+            except Exception:
+                print(f"Skipping {folder_path}, error:")
+                print(traceback.format_exc())
+
+
+def _start_containers():
+    """
+    Start containers for all optimade mongoDB databases (that don't already have a
+    container running)
+    """
+
+    print("#### ---------------------------------------------")
+    print("#### Starting containers")
+    print("#### ---------------------------------------------")
+
+    # Get list of running docker containers starting with "optimade_"
+    optimade_container_names = _get_optimade_containers()
+    print("Running OPTIMADE containers: ", optimade_container_names)
+
+    existing_dbs = _get_optimade_mongodbs(mongo_client)
+    print("Existing MongoDBs: ", existing_dbs)
+
+    import subprocess
+
+    OLAUNCH_CONFIG_DIR = "/home/ubuntu/optimade-launch-configs"
+
+    # Note: don't add the JSONL files here, as data was already injected separately
+    olaunch_config_template = """
+---
+name: {DOI_ID}
+mongo_uri: mongodb://localhost:27017
+db_name: {DB_NAME}
+unix_sock: {SOCKET_PATH}
+optimade_base_url: {BASE_URL}
+optimade_index_base_url: http://dev-optimade.materialscloud.org/index
+optimade_provider:
+    prefix: "mcloudarchive"
+    name: "Materials Cloud Archive"
+    description: "OPTIMADE provider for Materials Cloud Archive"
+    homepage: "https://archive.materialscloud.org"
+"""
+
+    for db in existing_dbs:
+        if db not in optimade_container_names:
+            print(f"MongoDB {db} doesn't have a container! Starting...")
+
+            doi_id = db.split("optimade_")[1]
+
+            # write the optimade-launch-config.yml
+            olaunch_config_path = os.path.join(OLAUNCH_CONFIG_DIR, f"{doi_id}.yaml")
+
+            with open(olaunch_config_path, "w") as fhandle:
+                fhandle.write(
+                    olaunch_config_template.format(
+                        DOI_ID=doi_id,
+                        DB_NAME=_mongodb_name(doi_id),
+                        SOCKET_PATH=os.path.join(SOCKET_DIR, doi_id + ".sock"),
+                        BASE_URL=BASE_URL_BASE + doi_id,
+                    )
+                )
+                print(f"Wrote {olaunch_config_path}!")
+
+            # Call the CLI commands
+            try:
+                print("---- optimade-launch profile create")
+                start_time = time()
+                command = (
+                    f"optimade-launch profile create --config {olaunch_config_path}"
+                )
+                output = subprocess.check_output(command, shell=True).decode("utf-8")
+                print(output)
+                print(f"-- finished! Time: {time() - start_time:.2f}")
+
+                print("---- optimade-launch server start")
+                start_time = time()
+                command = f"optimade-launch -vvv server start -p {doi_id}"
+                output = subprocess.check_output(command, shell=True).decode("utf-8")
+                print(output)
+                print(f"---- finished! Time: {time() - start_time:.2f}")
+            except subprocess.CalledProcessError:
+                print(f"Skipping {db}, error:")
+                print(traceback.format_exc())
+
+
+def _update_index():
+    print("#### ---------------------------------------------")
+    print("#### Updating the index metadb")
+    print("#### ---------------------------------------------")
+
+    index = [
+        {
+            "id": "mc-archive-index",
+            "type": "links",
+            "name": "MC Archive index meta-db",
+            "description": "Materials Cloud Archive index meta-database",
+            "base_url": "https://dev-optimade.materialscloud.org/index",
+            "homepage": "https://archive.materialscloud.org",
+            "link_type": "root",
+        },
+    ]
+
+    for socket_file in Path(SOCKET_DIR).glob("*"):
+        doi_id = socket_file.stem
+        entry = {
+            "id": doi_id,
+            "type": "links",
+            "name": f"MC Archive {doi_id}",
+            "description": f"OPTIMADE API serving the Materials Cloud Archive entry {doi_id}",  # noqa
+            "base_url": f"https://dev-optimade.materialscloud.org/archive/{doi_id}",
+            "homepage": "x",
+            "link_type": "child",
+            "aggregate": "ok",
+        }
+
+        index.append(entry)
+
+    import json
+    import subprocess
+
+    INDEX_METADB_PATH = "/home/ubuntu/index-metadb"
+
+    with open(os.path.join(INDEX_METADB_PATH, "index_links.json"), "w") as f:
+        json.dump(index, f)
+
+    # start or restart the index metadb from the docker-compose file.
+    try:
+        # Use Docker Compose to start or restart the service
+        subprocess.run(
+            [
+                "docker",
+                "compose",
+                "-f",
+                os.path.join(INDEX_METADB_PATH, "docker-compose.yml"),
+                "up",
+                "-d",
+                "--force-recreate",
+            ]
+        )
+        print("Index metadb started/restarted.")
+    except subprocess.CalledProcessError as e:
+        print(f"An error occurred: {e}")
+
+
+def _update_landing_page():
+    """
+    Update the landing page served at the root of the website based on the
+    unix socket files
+    """
+
+    print("#### ---------------------------------------------")
+    print("#### update landing page")
+    print("#### ---------------------------------------------")
+
+    from string import Template
+
+    p = Path(__file__).with_name("landing_page.html.template")
+    with p.open("r") as f:
+        landing_page_template = Template(f.read())
+
+    db_list_html = ""
+    for socket_file in Path(SOCKET_DIR).glob("*"):
+        doi_id = socket_file.stem
+        base_url = BASE_URL_BASE + doi_id
+        db_list_html += f"<li><a href='{base_url}'>{base_url}</a></li>\n"
+
+    index_html_loc = "/var/www/html/index.html"
+    with open(index_html_loc, "w") as f:
+        f.write(
+            landing_page_template.substitute(
+                HTML_DB_LIST_ENTRIES=db_list_html,
+                INDEX_BASE_URL="https://dev-optimade.materialscloud.org/index",
             )
-            print(f"Wrote {olaunch_config_path}!")
-
-        # Call the CLI commands
-
-        print("---- optimade-launch profile create")
-        profile_start_time = time()
-        command = f"optimade-launch profile create --config {olaunch_config_path}"
-        output = subprocess.check_output(command, shell=True).decode("utf-8")
-        print(output)
-        print(
-            f"-- optimade-launch profile create finished! Time: {time() - profile_start_time:.2f}"
         )
-        print("----")
-
-        print("---- optimade-launch server start")
-        server_start_time = time()
-        command = f"optimade-launch -vvv server start -p {doi_id}"
-        output = subprocess.check_output(command, shell=True).decode("utf-8")
-        print(output)
-        print(
-            f"-- optimade-launch server start finished! Time: {time() - server_start_time:.2f}"
-        )
-        print("----")
 
 
-# Should the /tmp/archive/ab-cd folder be deleted here to save space?
+@click.command()
+@click.option("--skip_download", is_flag=True)
+@click.option("--skip_convert", is_flag=True)
+@click.option("--skip_mongo_inject", is_flag=True)
+@click.option("--skip_container_start", is_flag=True)
+@click.option("--skip_index_update", is_flag=True)
+@click.option("--skip_landing_update", is_flag=True)
+def cli(
+    skip_download,
+    skip_convert,
+    skip_mongo_inject,
+    skip_container_start,
+    skip_index_update,
+    skip_landing_update,
+):
+    """
+    Set up the Materials Cloud Archive OPTIMADE APIs.
+    """
 
-# -------------------------------------------------------------------------------
-# 4. update landing page based on socket files
+    if not skip_download:
+        _download_entries_from_archive()
+    if not skip_convert:
+        _convert_entries_to_jsonl()
+    if not skip_mongo_inject:
+        _populate_mongodbs()
+    if not skip_container_start:
+        _start_containers()
+    if not skip_index_update:
+        _update_index()
+    if not skip_landing_update:
+        _update_landing_page()
 
-print("#### ---------------------------------------------")
-print("#### 4. update landing page")
-print("#### ---------------------------------------------")
 
-from string import Template
-
-p = Path(__file__).with_name("landing_page.html.template")
-with p.open("r") as f:
-    landing_page_template = Template(f.read())
-
-
-db_list_html = ""
-for socket_file in Path(SOCKET_DIR).glob("*"):
-    doi_id = socket_file.stem
-    base_url = BASE_URL_BASE + doi_id
-    db_list_html += f"<li><a href='{base_url}'>{base_url}</a></li>\n"
-
-index_html_loc = "/var/www/html/index.html"
-with open(index_html_loc, "w") as f:
-    f.write(landing_page_template.substitute(HTML_DB_LIST_ENTRIES=db_list_html))
+if __name__ == "__main__":
+    cli()

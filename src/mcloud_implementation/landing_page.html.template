@@ -23,7 +23,12 @@
 			<img height="100px" src="https://raw.githubusercontent.com/materialscloud-org/discover-mc3d-react/main/public/mcloud_spinner.svg">
 			</span>
 		</div>
-        <h3>Welcome to the Materials Cloud OPTIMADE server!</h3>
+        <h3>Welcome to the Materials Cloud Archive OPTIMADE server!</h3>
+        <h3>Index meta-database:</h3>
+        <ul>
+        <li><a href='$INDEX_BASE_URL/v1/info'>$INDEX_BASE_URL/v1/info</a></li>
+        <li><a href='$INDEX_BASE_URL/v1/links'>$INDEX_BASE_URL/v1/links</a></li>
+        </ul>
         <h3>Available databases:</h3>
         <ul>
 $HTML_DB_LIST_ENTRIES

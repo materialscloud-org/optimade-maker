@@ -1,0 +1,4 @@
+pymongo
+docker
+tqdm
+click
