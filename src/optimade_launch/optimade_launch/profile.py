@@ -10,7 +10,7 @@ from docker.models.containers import Container
 CONTAINER_PREFIX = "optimade"
 
 DEFAULT_PORT = 8081
-DEFAULT_IMAGE = "ghcr.io/materials-consortia/optimade:0.24.0"
+DEFAULT_IMAGE = "ghcr.io/materials-consortia/optimade:0.25.2"
 DEFAULT_MONGO_URI = "mongodb://127.0.0.1:27017"
 DEFAULT_BASE_URL = "http://localhost"
 DEFAULT_INDEX_BASE_URL = "http://localhost"
@@ -35,6 +35,7 @@ def _get_configured_host_port(container: Container) -> int | None:
 @dataclass
 class Profile:
     name: str = DEFAULT_NAME
+    image: str = DEFAULT_IMAGE
     jsonl_paths: list[str] = field(default_factory=lambda: [])
     mongo_uri: str = DEFAULT_MONGO_URI
     db_name: str = "optimade"

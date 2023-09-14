@@ -110,9 +110,13 @@ class OptimadeInstance:
         try:
             LOGGER.info(f"Building image from Dockerfile: {str(_DOCKERFILE_PATH)}")
             tag = tag or _BUILD_TAG
+            buildargs = {
+                "BASE_IMAGE": self.profile.image,
+            }
             image, logs = self.client.images.build(
                 path=str(_DOCKERFILE_PATH),
                 tag=tag,
+                buildargs=buildargs,
                 rm=True,
             )
             LOGGER.info(f"Built image: {image}")

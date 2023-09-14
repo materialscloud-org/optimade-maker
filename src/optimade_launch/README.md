@@ -14,28 +14,38 @@ To use OPTIMADE launch you will have to
 
    _Or directly with pip (`pip install optimade-launch`)._
 
-3. creating a profile and attach a database from inject data from JSONL file
+3. creating a profile with a config yaml file
+
+   ```yml
+   name: <parsed_doi>
+   socket:
+      - /host/path.sock
+      - /var/lib/optimade-sockets/<parsed_doi>.sock
+   jsonl:
+      - /var/lib/optimade-archive/<parsed_doi>.jsonl
+   mongo_uri: mongodb://localhost:27017
+   db_name: <parsed_doi>
+   optimade_base_url: http://localhost
+   optimade_index_base_url: http://localhost
+   optimade_provider:
+      prefix: "myorg"
+      name: "My Organization"
+      description: "My Organization's OPTIMADE provider"
+      homepage: "https://myorg.org"
+   ```
 
    ```console
-   optimade-launch profile create --profile-name test --jsonl /path/to/your/jsonl/file
+   optimade-launch profile create --config /path/to/your/yml/file
    ```
 
 4. Start OPTIMADE server of testing data with
 
     ```console
-    optimade-launch start
+    optimade-launch server start -p <profile_name>
     ```
 5. Follow the instructions on screen to open OPTIMADE API in the browser.
 
 See `optimade-launch --help` for detailed help.
-
-### Instance Management
-
-You can inspect the status of all configured AiiDAlab profiles with:
-
-```console
-optimade-launch status
-```
 
 ### Profile Management
 
@@ -53,7 +63,7 @@ Can used to clean up the database.
 
 See `optimade-launch container --help` for more information.
 
-Can be used to check the status of the container, or to stop and remove the container.
+Can be used to start the created container, or to stop and remove the container.
 
 ### Server Management
 

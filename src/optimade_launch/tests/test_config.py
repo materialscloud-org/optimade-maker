@@ -11,7 +11,7 @@ CONFIGS = {
 
         [profiles.default]
         port = 8081
-        image = "ghcr.io/materials-consortia/optimade:0.24.0"
+        image = "ghcr.io/materials-consortia/optimade:latest"
         """
 }
 

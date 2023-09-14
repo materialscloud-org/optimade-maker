@@ -1,10 +1,10 @@
 ---
 name: te-st
 jsonl_paths:
-   - /var/lib/optimade-archive/te-st.jsonl
+   - /tmp/optimade.jsonl
 mongo_uri: mongodb://localhost:27017
 db_name: te-st
-unix_sock: /var/lib/optimade-sockets/te-st.sock
+unix_sock: /tmp/te-st.sock
 optimade_base_url: http://localhost
 optimade_index_base_url: http://localhost
 optimade_provider:

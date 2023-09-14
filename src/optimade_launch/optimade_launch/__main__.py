@@ -112,8 +112,7 @@ async def _async_start(
             )
             
     except docker.errors.APIError as error:
-        # TODO LOGGING
-        raise click.ClickException("Startup failed due to an API error.") from error
+        raise
     
     except Exception as error:
         raise click.ClickException(f"Unknown error: {error}.") from error
@@ -349,7 +348,7 @@ def edit_profile(app_state, profile):
     "--jsonl", 
     type=click.Path(exists=True), 
     multiple=True,
-    help="Path to a JSON Lines file as the source of database.",
+    help="Path to a OPTIMADE JSON Lines file as the source of database.",
 )
 @click.option(
     "--db-name",
@@ -360,7 +359,7 @@ def edit_profile(app_state, profile):
     "--config",
     type=click.Path(exists=True),
     required=False,
-    help="Path to a YAML file containing the configuration.",
+    help="Path to a YAML configuration to create a profile from.",
 )
 @pass_app_state
 @click.pass_context

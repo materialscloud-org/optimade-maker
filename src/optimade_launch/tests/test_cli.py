@@ -1,16 +1,10 @@
-import logging
-import os
-from dataclasses import replace
-
-import docker
-import pytest
 from click.testing import CliRunner, Result
 
 import optimade_launch.__main__ as cli
 from optimade_launch import __version__
 from optimade_launch.profile import Profile
 
-def test_version_displays_library_version(tmp_path):
+def test_version_displays_library_version():
     """Test that the CLI displays the library version.
     """
     runner: CliRunner = CliRunner()
