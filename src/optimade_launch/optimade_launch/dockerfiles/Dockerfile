@@ -9,8 +9,6 @@ ENV UNIX_SOCK "/tmp/gunicorn.sock"
 
 COPY run.sh /app/run.sh
 
-ENV OPTIMADE_CONFIG_FILE ""
-
 ## Set the default config file path 
 ## Then copy the config from host to container
 #ENV OPTIMADE_CONFIG_FILE "/config/config.yml"

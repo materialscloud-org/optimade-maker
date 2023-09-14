@@ -10,7 +10,7 @@ from .core import LOGGER
 from .util import spinner
 from .instance import OptimadeInstance, _BUILD_TAG
 from .application_state import ApplicationState
-from .profile import DEFAULT_PORT, Profile
+from .profile import Profile
 from .version import __version__
 
 LOGGING_LEVELS = {
@@ -367,12 +367,18 @@ def create_profile(ctx, app_state, port: int | None, mongo_uri: str, jsonl: list
     """Add a new Optimade profile to the configuration."""
     import json
 
+    # XXX: read config if exist and use it as base, override with cli args if provided
     if config:
         import yaml
         
         with open(config) as f:
             params = yaml.safe_load(f)
-            profile = params["name"]
+            if "name" in params:
+                profile = params["name"]
+            elif profile is None:
+                raise click.ClickException("No profile name provided.")
+            else:
+                params["name"] = profile
     else:
         params = {
             "name": profile,

@@ -5,6 +5,7 @@ jsonl_paths:
 mongo_uri: mongodb://localhost:27017
 db_name: te-st
 unix_sock: /tmp/te-st.sock
+optimade_config_file: /tmp/optimade_config.json
 optimade_base_url: http://localhost
 optimade_index_base_url: http://localhost
 optimade_provider:
