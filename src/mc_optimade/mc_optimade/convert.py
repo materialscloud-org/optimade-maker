@@ -139,6 +139,8 @@ def inflate_archive(archive_path: Path, data_path: Path) -> None:
     Supports .tar.bz2, .tar.gz and .zip files.
 
     """
+    import bz2
+    import gzip
     import tarfile
     import zipfile
 
@@ -150,6 +152,23 @@ def inflate_archive(archive_path: Path, data_path: Path) -> None:
         with zipfile.ZipFile(real_path, "r") as zip_ref:
             zip_ref.extractall(real_path.parent)
 
+    # Assume this is a single compressed JSON file
+    # Decompress it and write it using the appropriate
+    # method based on its suffix
+    elif ".json" in real_path.suffixes:
+        # Default to gzip
+        compressed_open: Callable = gzip.open
+        if real_path.suffix == ".bz2":
+            compressed_open = bz2.open
+
+        # Get the compressed data and immediately write it back out, stripping
+        # the compression suffix
+        with compressed_open(real_path, "r") as zip:
+            with open(real_path.with_suffix(""), "w") as f:
+                f.write(zip.read().decode("utf-8"))
+
+    # Otherwise, assume we have a tar file and extract it
+    # using `tarfile`'s compression detection
     else:
         with tarfile.open(real_path, "r") as tar:
             tar.extractall(path=real_path.parent)
