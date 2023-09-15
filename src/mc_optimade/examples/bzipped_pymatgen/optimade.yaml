@@ -1,0 +1,14 @@
+config_version: 0.1.0
+
+database_description: >-
+  This database contains some bzipped pymatgen objects.
+
+provider_prefix: mcloudarchive
+
+entries:
+  - entry_type: structures
+    id_key: mat_id
+    entry_paths:
+      - file: part_1.json.bz2
+        matches:
+          - part_1.json
