@@ -7,7 +7,6 @@ provider_prefix: mcloudarchive
 
 entries:
   - entry_type: structures
-    id_key: mat_id
     entry_paths:
       - file: part_1.json.bz2
         matches:

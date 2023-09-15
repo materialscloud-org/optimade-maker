@@ -1,14 +1,15 @@
 from pathlib import Path
 from typing import Any, Callable
 
-from pymatgen.entries.computed_entries import ComputedStructureEntry
-from optimade.adapters import Structure
-from optimade.models import EntryResource
 import ase.io
-import pymatgen.entries.computed_entries
-import pymatgen.core
 import pandas
 import pybtex.database
+import pymatgen.core
+import pymatgen.entries.computed_entries
+from optimade.adapters import Structure
+from optimade.models import EntryResource
+from pymatgen.entries.computed_entries import ComputedStructureEntry
+
 
 def pybtex_to_optimade(bib_entry: Any) -> EntryResource:
     raise NotImplementedError
@@ -35,6 +36,7 @@ def load_csv_file(p: Path) -> dict[str, dict[str, Any]]:
 
     return df.to_dict(orient="index")
 
+
 PROPERTY_PARSERS: dict[str, list[Callable[[Path], Any]]] = {
     ".csv": [load_csv_file],
 }
@@ -45,6 +47,7 @@ def wrapped_json_parser(parser):
     on a single JSON file.
 
     """
+
     def _wrapped_json_parser(path: Path) -> Any:
         import json
 
@@ -73,12 +76,17 @@ ENTRY_PARSERS: dict[str, list[Callable[[Path], Any]]] = {
     "references": [pybtex.database.parse_file],
 }
 
+
 def parse_computed_structure_entry(pmg_entry: ComputedStructureEntry) -> dict:
     """Convert a pymatgen ComputedStructureEntry to an OPTIMADE EntryResource."""
 
-    entry = Structure.ingest_from(pmg_entry.structure).dict()
+    entry = Structure.ingest_from(pmg_entry.structure).entry.dict()
     entry["attributes"].update(pmg_entry.data)
     entry["attributes"]["energy"] = pmg_entry.energy
+    # try to find any unique ID fields and use it to overwrite the generated one
+    for key in ("id", "mat_id", "task_id"):
+        entry["id"] = pmg_entry.data.get(key, entry["id"])
+        break
     return entry
 
 

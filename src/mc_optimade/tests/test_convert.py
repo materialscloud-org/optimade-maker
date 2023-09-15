@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from optimade.models import EntryInfoResource, StructureResource
 
-from mc_optimade.convert import convert_archive
+from mc_optimade.convert import convert_archive, inflate_archive
 
 EXAMPLE_ARCHIVES = (Path(__file__).parent.parent / "examples").glob("*")
 
@@ -26,11 +26,21 @@ def test_convert_example_archives(archive_path, tmp_path):
         assert "x-optimade" in header
 
 
+def test_decompress_bz2(tmp_path):
+    archive_path = Path(__file__).parent.parent / "examples" / "bzipped_pymatgen"
+    # copy example into temporary path
+    tmp_path = tmp_path / archive_path.name
+    shutil.copytree(archive_path, tmp_path)
+
+    inflate_archive(tmp_path, "part_1.json.bz2")
+    assert (tmp_path / "part_1.json").exists()
+
+
 def test_example_archive_structure_id(tmp_path):
     STRUCT_ID = (
         "structures.zip/structures/cifs/55c564f6-ac6a-4122-b8d9-0ad9fe61e961.cif"
     )
-    archive_path = Path(__file__).parent.parent / "examples/folder_of_cifs"
+    archive_path = Path(__file__).parent.parent / "examples" / "folder_of_cifs"
 
     # copy example into temporary path
     tmp_path = tmp_path / archive_path.name

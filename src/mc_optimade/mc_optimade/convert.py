@@ -8,56 +8,11 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable
 
-import ase.io
-import pandas
-import pybtex.database
 import tqdm
-from optimade.adapters import Structure
 from optimade.models import EntryInfoResource, EntryResource
 
 from .config import Config, EntryConfig, ParsedFiles, PropertyDefinition
-
-
-def pybtex_to_optimade(bib_entry: Any) -> EntryResource:
-    raise NotImplementedError
-
-
-def load_csv_file(p: Path) -> dict[str, dict[str, Any]]:
-    """Parses a CSV file found at path `p` and returns a dictionary
-    of properties keyed by ID.
-
-    Requires the `id` column to be present in the CSV file, which will
-    be matched with the generated IDs.
-
-    Returns:
-        A dictionary of ID -> properties.
-
-    """
-    df = pandas.read_csv(p)
-    if "id" not in df:
-        raise RuntimeError(
-            "CSV file {p} must have an 'id' column: not just {df.columns}"
-        )
-
-    df = df.set_index("id")
-
-    return df.to_dict(orient="index")
-
-
-PROPERTY_PARSERS: dict[str, list[Callable[[Path], Any]]] = {
-    ".csv": [load_csv_file],
-}
-
-ENTRY_PARSERS: dict[str, list[Callable[[Path], Any]]] = {
-    "structures": [ase.io.read],
-    "references": [pybtex.database.parse_file],
-}
-
-
-OPTIMADE_CONVERTERS: dict[str, list[Callable[[Any], EntryResource]]] = {
-    "structures": [Structure.ingest_from],
-    "references": [pybtex_to_optimade],
-}
+from .parsers import ENTRY_PARSERS, OPTIMADE_CONVERTERS, PROPERTY_PARSERS
 
 
 def _construct_entry_type_info(
@@ -233,26 +188,37 @@ def _parse_entries(
 
     """
     parsed_entries = []
-    entry_ids = []
+    entry_ids: list[str] = []
     for archive_file in matches_by_file:
         for _path in tqdm.tqdm(
             matches_by_file[archive_file],
             desc=f"Parsing {entry_type} files",
         ):
+            path_in_archive: Path = Path(_path).relative_to(Path(archive_path))
+            exceptions = {}
+
             for parser in ENTRY_PARSERS[entry_type]:
                 try:
                     doc = parser(_path)
-                    parsed_entries.append(doc)
+                    if isinstance(doc, list):
+                        parsed_entries.extend(doc)
+                        entry_ids.extend(
+                            [
+                                f"{archive_file}/{path_in_archive}/{ind}"
+                                for ind, _ in enumerate(doc)
+                            ]
+                        )
+                    else:
+                        parsed_entries.append(doc)
+                        entry_ids.append(f"{archive_file}/{path_in_archive}")
                     break
-                except Exception:
+                except Exception as exc:
+                    exceptions[parser] = exc
                     continue
             else:
                 raise RuntimeError(
-                    f"None of the provided parsers {ENTRY_PARSERS[entry_type]} could parse {_path}"
+                    f"None of the provided parsers {ENTRY_PARSERS[entry_type]} could parse {_path}. Errors: {exceptions}"
                 )
-
-            path_in_archive = Path(_path).relative_to(Path(archive_path))
-            entry_ids.append(f"{archive_file}/{path_in_archive}")
 
     return parsed_entries, entry_ids
 
@@ -342,7 +308,9 @@ def construct_entries(
 
     # Parse into intermediate format
     parsed_entries, entry_ids = _parse_entries(
-        archive_path, entry_matches_by_file, entry_config.entry_type
+        archive_path,
+        entry_matches_by_file,
+        entry_config.entry_type,
     )
 
     # Parse properties
@@ -357,23 +325,30 @@ def construct_entries(
         zip(entry_ids, parsed_entries),
         desc=f"Constructing OPTIMADE {entry_config.entry_type} entries",
     ):
+        exceptions = {}
         for converter in OPTIMADE_CONVERTERS[entry_config.entry_type]:
             try:
-                entry = converter(entry).entry
+                entry = converter(entry)
+                if not isinstance(entry, dict):
+                    entry = entry.entry
                 break
-            except Exception:
+            except Exception as exc:
+                exceptions[converter] = exc
                 continue
         else:
             raise RuntimeError(
-                f"Could not convert entry {entry} with any of the provided converters: {OPTIMADE_CONVERTERS[entry_config.entry_type]}"
+                f"Could not convert entry {entry} with any of the provided converters: {OPTIMADE_CONVERTERS[entry_config.entry_type]}. Errors: {exceptions}"
             )
 
-        entry.id = entry_id
+        if not isinstance(entry, dict):
+            entry = entry.dict()
+
+        entry["id"] = entry_id
 
         if entry_id in optimade_entries:
             raise RuntimeError(f"Duplicate entry ID found: {entry_id}")
 
-        optimade_entries[entry_id] = entry.dict()
+        optimade_entries[entry_id] = entry
 
     # Now try to parse the properties and assign them to OPTIMADE entries
     _parse_and_assign_properties(
