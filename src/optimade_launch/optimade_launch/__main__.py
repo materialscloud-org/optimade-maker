@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import click
 import docker
+from pathlib import Path
 import logging
 import sys
 import asyncio
@@ -378,7 +379,7 @@ def create_profile(ctx, app_state, port: int | None, mongo_uri: str, jsonl: list
         params = {
             "name": profile,
             "mongo_uri": mongo_uri,
-            "jsonl_paths": jsonl,
+            "jsonl_paths": [str(Path(f).resolve()) for f in jsonl],
             "db_name": db_name or f"optimade-{profile}",
             "port": None,
         }

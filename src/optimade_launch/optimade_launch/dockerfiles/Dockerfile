@@ -1,4 +1,4 @@
-FROM ghcr.io/materials-consortia/optimade:0.24.0
+FROM ghcr.io/materials-consortia/optimade:latest
 
 # copy repo contents and install deps
 COPY requirements.txt ./
