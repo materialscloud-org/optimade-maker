@@ -1,0 +1,20 @@
+config_version: 0.1.0
+
+database_description: >-
+  This database contains 3 xyz files, one of which should be excluded from the API.
+
+provider_prefix: mcloudarchive
+
+entries:
+  - entry_type: structures
+    entry_paths:
+      - file: H_1.xyz
+      - file: H_2.xyz
+    property_paths:
+      - file: data.csv
+    property_definitions:
+    - name: name
+      title: Name
+      description: The name
+      unit: null
+      type: string
