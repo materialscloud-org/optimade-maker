@@ -91,7 +91,8 @@ def inflate_archive(archive_path: Path, data_path: Path) -> None:
     """For a given compressed file in an archive entry, decompress it and place
     the contents at the root of the archive entry file system.
 
-    Supports .tar.bz2, .tar.gz and .zip files.
+    Supports .tar.bz2, .tar.gz and .zip files, as well as individually compressed
+    <x>.gz and <x>.bz2 files.
 
     """
     import bz2
@@ -107,10 +108,15 @@ def inflate_archive(archive_path: Path, data_path: Path) -> None:
         with zipfile.ZipFile(real_path, "r") as zip_ref:
             zip_ref.extractall(real_path.parent)
 
-    # Assume this is a single compressed JSON file
+    # If .tar in filename suffixes, use `tarfile`'s compression detection
+    elif ".tar" in real_path.suffixes:
+        with tarfile.open(real_path, "r") as tar:
+            tar.extractall(path=real_path.parent)
+
+    # Otherwise assume this is a single compressed file
     # Decompress it and write it using the appropriate
     # method based on its suffix
-    elif ".json" in real_path.suffixes:
+    else:
         # Default to gzip
         compressed_open: Callable = gzip.open
         if real_path.suffix == ".bz2":
@@ -121,12 +127,6 @@ def inflate_archive(archive_path: Path, data_path: Path) -> None:
         with compressed_open(real_path, "r") as zip:
             with open(real_path.with_suffix(""), "w") as f:
                 f.write(zip.read().decode("utf-8"))
-
-    # Otherwise, assume we have a tar file and extract it
-    # using `tarfile`'s compression detection
-    else:
-        with tarfile.open(real_path, "r") as tar:
-            tar.extractall(path=real_path.parent)
 
     return
 
