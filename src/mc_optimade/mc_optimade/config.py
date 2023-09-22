@@ -45,7 +45,9 @@ Will be served with a provider-specific prefix in the actual API, so must not st
 
 
 class ParsedFiles(BaseModel):
-    file: str = Field(description="The filename containing the data to be parsed.")
+    file: str = Field(
+        description="The path to an archive or file to be unzipped/decompressed."
+    )
 
     matches: Optional[list[str]] = Field(
         description="A list of matches to be used to filter the file contents. Each match can use simple '*' wildcard syntax.",

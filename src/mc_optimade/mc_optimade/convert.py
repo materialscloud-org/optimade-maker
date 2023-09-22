@@ -59,9 +59,11 @@ def convert_archive(archive_path: Path) -> Path:
     data_paths: set[Path] = set()
     for entry in mc_config.entries:
         for e in entry.entry_paths:
-            data_paths.add((archive_path / str(e.file)).resolve())
+            if e.matches:
+                data_paths.add((archive_path / str(e.file)).resolve())
         for p in entry.property_paths:
-            data_paths.add((archive_path / str(p.file)).resolve())
+            if p.matches:
+                data_paths.add((archive_path / str(p.file)).resolve())
 
     for data_path in data_paths:
         inflate_archive(archive_path, data_path)
@@ -117,16 +119,18 @@ def inflate_archive(archive_path: Path, data_path: Path) -> None:
     # Decompress it and write it using the appropriate
     # method based on its suffix
     else:
-        # Default to gzip
-        compressed_open: Callable = gzip.open
+        compressed_open: Callable | None = None
         if real_path.suffix == ".bz2":
             compressed_open = bz2.open
+        elif real_path.suffix == "gz":
+            compressed_open = gzip.open
 
         # Get the compressed data and immediately write it back out, stripping
         # the compression suffix
-        with compressed_open(real_path, "r") as zip:
-            with open(real_path.with_suffix(""), "w") as f:
-                f.write(zip.read().decode("utf-8"))
+        if compressed_open:
+            with compressed_open(real_path, "r") as zip:
+                with open(real_path.with_suffix(""), "w") as f:
+                    f.write(zip.read().decode("utf-8"))
 
     return
 
@@ -155,6 +159,9 @@ def _get_matches(
                 matches_by_file[path.file] += wildcard
             else:
                 matches_by_file[path.file] += [Path(archive_path) / m]
+
+        if not matches:
+            matches_by_file[path.file] += [Path(archive_path) / path.file]
 
     return matches_by_file
 
@@ -197,20 +204,23 @@ def _parse_entries(
             path_in_archive: Path = Path(_path).relative_to(Path(archive_path))
             exceptions = {}
 
+            id_root = (
+                f"{archive_file}/{path_in_archive}"
+                if len(matches_by_file[archive_file]) > 1
+                else str(archive_file)
+            )
+
             for parser in ENTRY_PARSERS[entry_type]:
                 try:
                     doc = parser(_path)
                     if isinstance(doc, list):
                         parsed_entries.extend(doc)
                         entry_ids.extend(
-                            [
-                                f"{archive_file}/{path_in_archive}/{ind}"
-                                for ind, _ in enumerate(doc)
-                            ]
+                            [f"{id_root}/{ind}" for ind, _ in enumerate(doc)]
                         )
                     else:
                         parsed_entries.append(doc)
-                        entry_ids.append(f"{archive_file}/{path_in_archive}")
+                        entry_ids.append(id_root)
                     break
                 except Exception as exc:
                     exceptions[parser] = exc
