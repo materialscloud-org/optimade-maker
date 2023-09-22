@@ -122,7 +122,7 @@ def inflate_archive(archive_path: Path, data_path: Path) -> None:
         compressed_open: Callable | None = None
         if real_path.suffix == ".bz2":
             compressed_open = bz2.open
-        elif real_path.suffix == "gz":
+        elif real_path.suffix == ".gz":
             compressed_open = gzip.open
 
         # Get the compressed data and immediately write it back out, stripping
