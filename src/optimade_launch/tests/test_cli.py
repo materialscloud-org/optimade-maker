@@ -1,8 +1,3 @@
-import logging
-from dataclasses import replace
-
-import docker
-import pytest
 from click.testing import CliRunner, Result
 
 import optimade_launch.__main__ as cli
@@ -13,9 +8,11 @@ def test_version_displays_library_version():
     """Test that the CLI displays the library version.
     """
     runner: CliRunner = CliRunner()
+
     result: Result = runner.invoke(cli.cli, ["version"])
     assert __version__ in result.output.strip(), "Version number should match library version."
     assert "Optimade Launch" in result.output.strip()
+
     
 def test_list_profiles():
     runner: CliRunner = CliRunner()

@@ -110,9 +110,13 @@ class OptimadeInstance:
         try:
             LOGGER.info(f"Building image from Dockerfile: {str(_DOCKERFILE_PATH)}")
             tag = tag or _BUILD_TAG
+            buildargs = {
+                "BASE_IMAGE": self.profile.image,
+            }
             image, logs = self.client.images.build(
                 path=str(_DOCKERFILE_PATH),
                 tag=tag,
+                buildargs=buildargs,
                 rm=True,
             )
             LOGGER.info(f"Built image: {image}")
@@ -187,11 +191,15 @@ class OptimadeInstance:
             sock_filename = os.path.basename(self.profile.unix_sock)
             params_container["volumes"] = {host_sock_folder: {"bind": '/tmp', "mode": "rw"}}
             environment["UNIX_SOCK"] = f"/tmp/{sock_filename}"
+
+        # optimade config file
+        environment["OPTIMADE_CONFIG_FILE"] = self.profile.optimade_config_file
             
         if sys.platform == "linux" and "host.docker.internal" in self.profile.mongo_uri:
             params_container["extra_hosts"] = {"host.docker.internal": "host-gateway"}
         
         params_container["environment"] = environment
+
         self._container = self.client.containers.create(
             **params_container,
         )
@@ -205,7 +213,7 @@ class OptimadeInstance:
         self.create()
         
     def start(self) -> None:
-        # TODO: check mongodb can be connected to
+        # XXX: check mongodb can be connected to
         LOGGER.info(f"Starting container '{self.profile.container_name()}'...")
         (self.container or self.create(data=True)).start()
         assert self.container is not None
