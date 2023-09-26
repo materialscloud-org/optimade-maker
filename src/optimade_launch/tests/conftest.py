@@ -96,6 +96,8 @@ async def started_instance(docker_client, monkeypatch, mongo, static_dir):
     
     if host in ("localhost", "127.0.0.1"):
         instance._container.update({"network_mode": "host"})
+
+    print(instance.profile.environment())
     
     instance.create(data=True)
     assert instance.container is not None

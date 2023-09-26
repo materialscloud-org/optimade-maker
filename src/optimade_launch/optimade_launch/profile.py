@@ -10,7 +10,7 @@ from docker.models.containers import Container
 CONTAINER_PREFIX = "optimade"
 
 DEFAULT_PORT = 8081
-DEFAULT_IMAGE = "ghcr.io/materials-consortia/optimade:0.24.0"
+DEFAULT_IMAGE = "ghcr.io/materials-consortia/optimade:0.25.2"
 DEFAULT_MONGO_URI = "mongodb://127.0.0.1:27017"
 DEFAULT_BASE_URL = "http://localhost"
 DEFAULT_INDEX_BASE_URL = "http://localhost"
@@ -35,14 +35,16 @@ def _get_configured_host_port(container: Container) -> int | None:
 @dataclass
 class Profile:
     name: str = DEFAULT_NAME
+    image: str = DEFAULT_IMAGE
     jsonl_paths: list[str] = field(default_factory=lambda: [])
     mongo_uri: str = DEFAULT_MONGO_URI
     db_name: str = "optimade"
     port: int | None = None
     unix_sock: str | None = None
-    optimade_base_url: str | None = DEFAULT_BASE_URL
-    optimade_index_base_url: str | None = DEFAULT_INDEX_BASE_URL
-    optimade_provider: str | None = DEFAULT_PROVIDER
+    optimade_config_file: str | None = None
+    optimade_base_url: str | None = None
+    optimade_index_base_url: str | None = None
+    optimade_provider: str | None = None
     optimade_validate_api_response: bool = False
 
     def __post_init__(self):
@@ -61,7 +63,7 @@ class Profile:
             self.mongo_uri = self.mongo_uri.replace("127.0.0.1", "host.docker.internal")
 
         return {
-            "OPTIMADE_CONFIG_FILE": None,
+            "optimade_config_file": self.optimade_config_file,
             "optimade_insert_test_data": False,
             "optimade_database_backend": "mongodb",
             "optimade_mongo_uri": self.mongo_uri,
@@ -77,7 +79,7 @@ class Profile:
 
     def dumps(self) -> str:
         """Dump the profile to a TOML string."""
-        return toml.dumps({k: v for k, v in asdict(self).items() if k != "name"})
+        return toml.dumps({k: v for k, v in asdict(self).items() if k != "name" and v is not None})
 
     @classmethod
     def loads(cls, name: str, s: str) -> Profile:
