@@ -10,11 +10,12 @@ from docker.models.containers import Container
 CONTAINER_PREFIX = "optimade"
 
 DEFAULT_PORT = 8081
-DEFAULT_IMAGE = "ghcr.io/materials-consortia/optimade:0.25.2"
+DEFAULT_IMAGE = "ghcr.io/materials-consortia/optimade:latest"
 DEFAULT_MONGO_URI = "mongodb://127.0.0.1:27017"
 DEFAULT_BASE_URL = "http://localhost"
 DEFAULT_INDEX_BASE_URL = "http://localhost"
-DEFAULT_PROVIDER = '{"prefix":"defualt","name":"Materials Cloud Archive","description":"Short description for My Organization","homepage":"https://example.org"}'  # noqa
+DEFAULT_PROVIDER = '{"prefix":"default","name":"Materials Cloud Archive","description":"Short description for My Organization","homepage":"https://example.org"}'  # noqa
+
 
 DEFAULT_NAME = "default"
 
