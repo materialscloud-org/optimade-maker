@@ -51,6 +51,7 @@ entries:
       type: float
     - name: space_group_number
       title: Space group number
+      description: The space group number in the international tables.
       type: integer
       aliases:
         - spg
