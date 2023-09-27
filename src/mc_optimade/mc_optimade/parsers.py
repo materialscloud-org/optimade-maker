@@ -10,8 +10,10 @@ from optimade.adapters import Structure
 from optimade.models import EntryResource
 from pymatgen.entries.computed_entries import ComputedStructureEntry
 
+from mc_optimade.config import PropertyDefinition
 
-def pybtex_to_optimade(bib_entry: Any) -> EntryResource:
+
+def pybtex_to_optimade(bib_entry: Any, properties=None) -> EntryResource:
     raise NotImplementedError
 
 
@@ -77,7 +79,10 @@ ENTRY_PARSERS: dict[str, list[Callable[[Path], Any]]] = {
 }
 
 
-def parse_computed_structure_entry(pmg_entry: ComputedStructureEntry) -> dict:
+def parse_computed_structure_entry(
+    pmg_entry: ComputedStructureEntry,
+    properties: list[PropertyDefinition] | None = None,
+) -> dict:
     """Convert a pymatgen ComputedStructureEntry to an OPTIMADE EntryResource."""
 
     entry = Structure.ingest_from(pmg_entry.structure).entry.dict()
@@ -87,10 +92,27 @@ def parse_computed_structure_entry(pmg_entry: ComputedStructureEntry) -> dict:
     for key in ("id", "mat_id", "task_id"):
         entry["id"] = pmg_entry.data.get(key, entry["id"])
         break
+
+    for p in properties or []:
+        # loop through any property aliases, saving the value if found and only checking
+        # the real name if not
+        for alias in p.aliases or []:
+            if value := pmg_entry.data.get(alias) is not None:
+                entry["attributes"][p.name] = value
+                break
+        else:
+            entry["attributes"][p.name] = pmg_entry.data.get(p.name)
+
     return entry
 
 
-OPTIMADE_CONVERTERS: dict[str, list[Callable[[Any], EntryResource | dict]]] = {
-    "structures": [Structure.ingest_from, parse_computed_structure_entry],
+def structure_ingest_wrapper(entry, properties=None):  # type: ignore
+    return Structure.ingest_from(entry)
+
+
+OPTIMADE_CONVERTERS: dict[
+    str, list[Callable[[Any, list[PropertyDefinition] | None], EntryResource | dict]]
+] = {
+    "structures": [structure_ingest_wrapper, parse_computed_structure_entry],
     "references": [pybtex_to_optimade],
 }

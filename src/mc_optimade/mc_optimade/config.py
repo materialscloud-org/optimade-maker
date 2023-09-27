@@ -42,6 +42,9 @@ Will be served with a provider-specific prefix in the actual API, so must not st
     mapsto: Optional[str] = Field(
         description="A URI/URN for a canonical definition of the property, within the OPTIMADE extended format. Where possible, this should be a versioned URI."
     )
+    aliases: Optional[list[str]] = Field(
+        description="A list of aliases to also search for for this property; `name` will be used for the field in the actual OPTIMADE API."
+    )
 
 
 class ParsedFiles(BaseModel):

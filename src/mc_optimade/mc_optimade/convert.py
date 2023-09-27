@@ -4,6 +4,7 @@ OPTIMADE API.
 
 """
 
+import warnings
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable
@@ -271,7 +272,7 @@ def _parse_and_assign_properties(
     # Match properties up to the descrptions provided in the config
     expected_property_fields = set(p.name for p in property_definitions)
     if expected_property_fields != all_property_fields:
-        raise RuntimeError(
+        warnings.warn(
             f"Found {all_property_fields=} in data but {expected_property_fields} in config"
         )
 
@@ -338,7 +339,7 @@ def construct_entries(
         exceptions = {}
         for converter in OPTIMADE_CONVERTERS[entry_config.entry_type]:
             try:
-                entry = converter(entry)
+                entry = converter(entry, properties=entry_config.property_definitions)  # type: ignore[call-arg]
                 if not isinstance(entry, dict):
                     entry = entry.entry
                 break

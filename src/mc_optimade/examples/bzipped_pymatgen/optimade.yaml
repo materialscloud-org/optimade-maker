@@ -11,3 +11,46 @@ entries:
       - file: part_1.json.bz2
         matches:
           - part_1.json
+    property_definitions:
+    - name: energy
+      title: Total energy per atom
+      description: The total energy per atom as computed by DFT
+      unit: eV/atom
+      type: float
+    - name: hull_distance
+      title: Convex hull distance
+      description: The distance this structure lies above the convex hull.
+      type: float
+      unit: eV/atom
+      aliases:
+        - e_above_hull
+    - name: formation_energy
+      title: Formation energy per atom
+      description: The formation energy per atom of the structure, computed relative to elemental chemical potentials
+      unit: eV/atom
+      aliases:
+        - e_form
+    - name: total_mag
+      title: Total magnetic moment
+      description: The total magnetic moment of the structure.
+      type: float
+      unit: bohrmagneton
+    - name: band_gap_dir
+      title: Direct band gap
+      description: The computed direct band gap of the structure
+      type: float
+      unit: eV
+    - name: band_gap_ind
+      title: Indirect band gap
+      description: The computed indirect band gap of the structure
+      type: float
+      unit: eV
+    - name: dos_ef
+      title: The density of states at the Fermi level
+      description: The computed density of states at the Fermi level
+      type: float
+    - name: space_group_number
+      title: Space group number
+      type: integer
+      aliases:
+        - spg
