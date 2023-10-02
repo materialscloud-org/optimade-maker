@@ -109,8 +109,10 @@ def parse_computed_structure_entry(
     entry["attributes"]["energy"] = pmg_entry.energy
     # try to find any unique ID fields and use it to overwrite the generated one
     for key in ("id", "mat_id", "task_id"):
-        entry["id"] = pmg_entry.data.get(key, entry["id"])
-        break
+        id = pmg_entry.data.get(key)
+        if id:
+            entry["id"] = id
+            break
 
     for p in properties or []:
         # loop through any property aliases, saving the value if found and only checking

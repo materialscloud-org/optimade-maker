@@ -364,7 +364,8 @@ def construct_entries(
         if not isinstance(entry, dict):
             entry = entry.dict()
 
-        entry["id"] = entry_id
+        if not entry["id"]:
+            entry["id"] = entry_id
 
         if entry_id in optimade_entries:
             raise RuntimeError(f"Duplicate entry ID found: {entry_id}")
