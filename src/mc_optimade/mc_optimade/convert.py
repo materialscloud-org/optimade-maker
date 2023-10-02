@@ -13,7 +13,7 @@ import tqdm
 from optimade.models import EntryInfoResource, EntryResource
 
 from .config import Config, EntryConfig, ParsedFiles, PropertyDefinition
-from .parsers import ENTRY_PARSERS, OPTIMADE_CONVERTERS, PROPERTY_PARSERS
+from .parsers import ENTRY_PARSERS, OPTIMADE_CONVERTERS, PROPERTY_PARSERS, TYPE_MAP
 
 
 def _construct_entry_type_info(
@@ -270,7 +270,11 @@ def _parse_and_assign_properties(
                 )
 
     # Match properties up to the descrptions provided in the config
-    expected_property_fields = set(p.name for p in property_definitions)
+    property_def_dict: dict[str, PropertyDefinition] = {
+        p.name: p for p in property_definitions
+    }
+    expected_property_fields = set(property_def_dict.keys())
+
     if expected_property_fields != all_property_fields:
         warnings.warn(
             f"Found {all_property_fields=} in data but {expected_property_fields} in config"
@@ -284,9 +288,12 @@ def _parse_and_assign_properties(
 
         for property in all_property_fields:
             # Loop over all defined properties and assign them to the entry, setting to None if missing
-            optimade_entries[id]["attributes"][
-                f"_{provider_prefix}_{property}"
-            ] = parsed_properties[id].get(property, None)
+            # Also cast types if provided
+            value = parsed_properties[id].get(property, None)
+            if value is not None and property_def_dict[property].type in TYPE_MAP:
+                value = TYPE_MAP[property_def_dict[property].type](value)
+
+            optimade_entries[id]["attributes"][f"_{provider_prefix}_{property}"] = value
 
 
 def construct_entries(

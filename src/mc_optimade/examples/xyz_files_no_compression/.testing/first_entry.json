@@ -25,19 +25,19 @@
     "nperiodic_dimensions": 0,
     "lattice_vectors": [
       [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ]
     ],
     "cartesian_site_positions": [

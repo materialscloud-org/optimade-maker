@@ -43,6 +43,13 @@ PROPERTY_PARSERS: dict[str, list[Callable[[Path], Any]]] = {
     ".csv": [load_csv_file],
 }
 
+TYPE_MAP: dict[str | None, type] = {
+    "float": float,
+    "string": str,
+    "integer": int,
+    "boolean": bool,
+}
+
 
 def wrapped_json_parser(parser):
     """This wrapper allows `from_dict` parser functions to be called
