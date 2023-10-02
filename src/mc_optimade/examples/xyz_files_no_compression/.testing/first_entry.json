@@ -18,26 +18,26 @@
     "chemical_formula_hill": null,
     "chemical_formula_anonymous": "A",
     "dimension_types": [
-      1,
-      1,
-      1
+      0,
+      0,
+      0
     ],
-    "nperiodic_dimensions": 3,
+    "nperiodic_dimensions": 0,
     "lattice_vectors": [
       [
-        7.738263,
+        0,
         0,
         0
       ],
       [
         0,
-        12.34417,
+        0,
         0
       ],
       [
         0,
         0,
-        12.988855033343631
+        0
       ]
     ],
     "cartesian_site_positions": [
