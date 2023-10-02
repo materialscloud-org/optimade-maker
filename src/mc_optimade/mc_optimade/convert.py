@@ -11,6 +11,7 @@ from typing import Any, Callable
 
 import tqdm
 from optimade.models import EntryInfoResource, EntryResource
+from optimade.server.schemas import ENTRY_INFO_SCHEMAS, retrieve_queryable_properties
 
 from .config import Config, EntryConfig, ParsedFiles, PropertyDefinition
 from .parsers import ENTRY_PARSERS, OPTIMADE_CONVERTERS, PROPERTY_PARSERS, TYPE_MAP
@@ -23,12 +24,17 @@ def _construct_entry_type_info(
 ) -> EntryInfoResource:
     """Take the provided property definitions and construct an entry info response.
 
-    TODO: Also insert the relevant default OPTIMADE fields.
-
     Returns:
         The full `EntryInfoResource` object.
 
     """
+
+    default_properties = {}
+    if type in ENTRY_INFO_SCHEMAS:
+        default_properties = retrieve_queryable_properties(
+            ENTRY_INFO_SCHEMAS[type](), {"id", "type", "attributes"}
+        )
+
     info: dict[str, Any] = {"formats": ["json"], "description": type}
     info["properties"] = {
         f"_{provider_prefix}_{p.name}": {
@@ -39,6 +45,7 @@ def _construct_entry_type_info(
         }
         for p in properties
     }
+    info["properties"].update(default_properties)
     info["output_fields_by_format"] = {}
     info["output_fields_by_format"]["json"] = list(info["properties"].keys())
     return EntryInfoResource(**info)
