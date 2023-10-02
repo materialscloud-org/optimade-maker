@@ -62,12 +62,24 @@ def wrapped_json_parser(parser):
 
         with open(path) as f:
             data = json.load(f)
+
         entries = []
-        if isinstance(data, dict):
+        # Either we already have a list of entries, or we need to find which key they are stored under
+        if isinstance(data, list):
+            for entry in data:
+                entries.append(entry)
+
+        elif isinstance(data, dict):
             for k in data:
                 if isinstance(data[k], list):
                     for entry in data[k]:
-                        entries.append(parser(entry))
+                        entries.append(entry)
+
+        for ind, e in enumerate(entries):
+            try:
+                entries[ind] = parser(e)
+            except Exception as e:
+                raise RuntimeError(f"Error parsing entry {entry} in {path}: {e}")
 
         return entries
 

@@ -214,6 +214,9 @@ def _parse_entries(
             for parser in ENTRY_PARSERS[entry_type]:
                 try:
                     doc = parser(_path)
+                    if not doc:
+                        raise RuntimeError(f"No entries parsed by {parser}")
+
                     if isinstance(doc, list):
                         parsed_entries.extend(doc)
                         entry_ids.extend(
