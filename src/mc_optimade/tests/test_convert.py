@@ -39,7 +39,12 @@ def test_convert_example_archives(archive_path, tmp_path):
 
         # if provided, check that the first entry matches
         if first_entry is not None:
-            while next_entry := json.loads(fhandle.readline()):
+            while next_line := fhandle.readline():
+                try:
+                    next_entry = json.loads(next_line)
+                except json.JSONDecodeError:
+                    assert False, f"Could not read line {next_line} as JSON"
+
                 if next_entry.get("type") == first_entry["type"]:
                     break
             else:
