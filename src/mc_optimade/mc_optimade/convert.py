@@ -152,7 +152,7 @@ def _get_matches(
         matches = path.matches or []
         for m in matches:
             if "*" in m:
-                wildcard = list(Path(archive_path).glob(m))
+                wildcard = sorted(list(Path(archive_path).glob(m)))
                 if not wildcard:
                     raise FileNotFoundError(
                         f"Could not find any files matching wildcard {m!r}"
