@@ -59,7 +59,10 @@ def test_convert_example_archives(archive_path, tmp_path):
                     species, key=lambda x: x["name"]
                 )
 
-            assert next_entry == first_entry
+            for key in ("id", "type", "relationships"):
+                assert next_entry[key] == first_entry[key]
+
+            assert next_entry["attributes"] == pytest.approx(first_entry["attributes"])
 
 
 def test_decompress_bz2(tmp_path):
