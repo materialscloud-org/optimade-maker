@@ -4,60 +4,17 @@ OPTIMADE API.
 
 """
 
+import warnings
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable
 
-import ase.io
-import pandas
-import pybtex.database
 import tqdm
-from optimade.adapters import Structure
 from optimade.models import EntryInfoResource, EntryResource
+from optimade.server.schemas import ENTRY_INFO_SCHEMAS, retrieve_queryable_properties
 
 from .config import Config, EntryConfig, ParsedFiles, PropertyDefinition
-
-
-def pybtex_to_optimade(bib_entry: Any) -> EntryResource:
-    raise NotImplementedError
-
-
-def load_csv_file(p: Path) -> dict[str, dict[str, Any]]:
-    """Parses a CSV file found at path `p` and returns a dictionary
-    of properties keyed by ID.
-
-    Requires the `id` column to be present in the CSV file, which will
-    be matched with the generated IDs.
-
-    Returns:
-        A dictionary of ID -> properties.
-
-    """
-    df = pandas.read_csv(p)
-    if "id" not in df:
-        raise RuntimeError(
-            "CSV file {p} must have an 'id' column: not just {df.columns}"
-        )
-
-    df = df.set_index("id")
-
-    return df.to_dict(orient="index")
-
-
-PROPERTY_PARSERS: dict[str, list[Callable[[Path], Any]]] = {
-    ".csv": [load_csv_file],
-}
-
-ENTRY_PARSERS: dict[str, list[Callable[[Path], Any]]] = {
-    "structures": [ase.io.read],
-    "references": [pybtex.database.parse_file],
-}
-
-
-OPTIMADE_CONVERTERS: dict[str, list[Callable[[Any], EntryResource]]] = {
-    "structures": [Structure.ingest_from],
-    "references": [pybtex_to_optimade],
-}
+from .parsers import ENTRY_PARSERS, OPTIMADE_CONVERTERS, PROPERTY_PARSERS, TYPE_MAP
 
 
 def _construct_entry_type_info(
@@ -67,12 +24,17 @@ def _construct_entry_type_info(
 ) -> EntryInfoResource:
     """Take the provided property definitions and construct an entry info response.
 
-    TODO: Also insert the relevant default OPTIMADE fields.
-
     Returns:
         The full `EntryInfoResource` object.
 
     """
+
+    default_properties = {}
+    if type in ENTRY_INFO_SCHEMAS:
+        default_properties = retrieve_queryable_properties(
+            ENTRY_INFO_SCHEMAS[type](), {"id", "type", "attributes"}
+        )
+
     info: dict[str, Any] = {"formats": ["json"], "description": type}
     info["properties"] = {
         f"_{provider_prefix}_{p.name}": {
@@ -83,6 +45,7 @@ def _construct_entry_type_info(
         }
         for p in properties
     }
+    info["properties"].update(default_properties)
     info["output_fields_by_format"] = {}
     info["output_fields_by_format"]["json"] = list(info["properties"].keys())
     return EntryInfoResource(**info)
@@ -104,9 +67,11 @@ def convert_archive(archive_path: Path) -> Path:
     data_paths: set[Path] = set()
     for entry in mc_config.entries:
         for e in entry.entry_paths:
-            data_paths.add((archive_path / str(e.file)).resolve())
+            if e.matches:
+                data_paths.add((archive_path / str(e.file)).resolve())
         for p in entry.property_paths:
-            data_paths.add((archive_path / str(p.file)).resolve())
+            if p.matches:
+                data_paths.add((archive_path / str(p.file)).resolve())
 
     for data_path in data_paths:
         inflate_archive(archive_path, data_path)
@@ -136,9 +101,12 @@ def inflate_archive(archive_path: Path, data_path: Path) -> None:
     """For a given compressed file in an archive entry, decompress it and place
     the contents at the root of the archive entry file system.
 
-    Supports .tar.bz2, .tar.gz and .zip files.
+    Supports .tar.bz2, .tar.gz and .zip files, as well as individually compressed
+    <x>.gz and <x>.bz2 files.
 
     """
+    import bz2
+    import gzip
     import tarfile
     import zipfile
 
@@ -150,9 +118,27 @@ def inflate_archive(archive_path: Path, data_path: Path) -> None:
         with zipfile.ZipFile(real_path, "r") as zip_ref:
             zip_ref.extractall(real_path.parent)
 
-    else:
+    # If .tar in filename suffixes, use `tarfile`'s compression detection
+    elif ".tar" in real_path.suffixes:
         with tarfile.open(real_path, "r") as tar:
             tar.extractall(path=real_path.parent)
+
+    # Otherwise assume this is a single compressed file
+    # Decompress it and write it using the appropriate
+    # method based on its suffix
+    else:
+        compressed_open: Callable | None = None
+        if real_path.suffix == ".bz2":
+            compressed_open = bz2.open
+        elif real_path.suffix == ".gz":
+            compressed_open = gzip.open
+
+        # Get the compressed data and immediately write it back out, stripping
+        # the compression suffix
+        if compressed_open:
+            with compressed_open(real_path, "r") as zip:
+                with open(real_path.with_suffix(""), "w") as f:
+                    f.write(zip.read().decode("utf-8"))
 
     return
 
@@ -173,7 +159,7 @@ def _get_matches(
         matches = path.matches or []
         for m in matches:
             if "*" in m:
-                wildcard = list(Path(archive_path).glob(m))
+                wildcard = sorted(list(Path(archive_path).glob(m)))
                 if not wildcard:
                     raise FileNotFoundError(
                         f"Could not find any files matching wildcard {m!r}"
@@ -181,6 +167,9 @@ def _get_matches(
                 matches_by_file[path.file] += wildcard
             else:
                 matches_by_file[path.file] += [Path(archive_path) / m]
+
+        if not matches:
+            matches_by_file[path.file] += [Path(archive_path) / path.file]
 
     return matches_by_file
 
@@ -214,26 +203,43 @@ def _parse_entries(
 
     """
     parsed_entries = []
-    entry_ids = []
+    entry_ids: list[str] = []
     for archive_file in matches_by_file:
         for _path in tqdm.tqdm(
             matches_by_file[archive_file],
             desc=f"Parsing {entry_type} files",
         ):
+            path_in_archive: Path = Path(_path).relative_to(Path(archive_path))
+            exceptions = {}
+
+            id_root = (
+                f"{archive_file}/{path_in_archive}"
+                if len(matches_by_file[archive_file]) > 1
+                else str(archive_file)
+            )
+
             for parser in ENTRY_PARSERS[entry_type]:
                 try:
                     doc = parser(_path)
-                    parsed_entries.append(doc)
+                    if not doc:
+                        raise RuntimeError(f"No entries parsed by {parser}")
+
+                    if isinstance(doc, list):
+                        parsed_entries.extend(doc)
+                        entry_ids.extend(
+                            [f"{id_root}/{ind}" for ind, _ in enumerate(doc)]
+                        )
+                    else:
+                        parsed_entries.append(doc)
+                        entry_ids.append(id_root)
                     break
-                except Exception:
+                except Exception as exc:
+                    exceptions[parser] = exc
                     continue
             else:
                 raise RuntimeError(
-                    f"None of the provided parsers {ENTRY_PARSERS[entry_type]} could parse {_path}"
+                    f"None of the provided parsers {ENTRY_PARSERS[entry_type]} could parse {_path}. Errors: {exceptions}"
                 )
-
-            path_in_archive = Path(_path).relative_to(Path(archive_path))
-            entry_ids.append(f"{archive_file}/{path_in_archive}")
 
     return parsed_entries, entry_ids
 
@@ -274,9 +280,13 @@ def _parse_and_assign_properties(
                 )
 
     # Match properties up to the descrptions provided in the config
-    expected_property_fields = set(p.name for p in property_definitions)
+    property_def_dict: dict[str, PropertyDefinition] = {
+        p.name: p for p in property_definitions
+    }
+    expected_property_fields = set(property_def_dict.keys())
+
     if expected_property_fields != all_property_fields:
-        raise RuntimeError(
+        warnings.warn(
             f"Found {all_property_fields=} in data but {expected_property_fields} in config"
         )
 
@@ -288,9 +298,12 @@ def _parse_and_assign_properties(
 
         for property in all_property_fields:
             # Loop over all defined properties and assign them to the entry, setting to None if missing
-            optimade_entries[id]["attributes"][
-                f"_{provider_prefix}_{property}"
-            ] = parsed_properties[id].get(property, None)
+            # Also cast types if provided
+            value = parsed_properties[id].get(property, None)
+            if value is not None and property_def_dict[property].type in TYPE_MAP:
+                value = TYPE_MAP[property_def_dict[property].type](value)
+
+            optimade_entries[id]["attributes"][f"_{provider_prefix}_{property}"] = value
 
 
 def construct_entries(
@@ -323,7 +336,9 @@ def construct_entries(
 
     # Parse into intermediate format
     parsed_entries, entry_ids = _parse_entries(
-        archive_path, entry_matches_by_file, entry_config.entry_type
+        archive_path,
+        entry_matches_by_file,
+        entry_config.entry_type,
     )
 
     # Parse properties
@@ -338,23 +353,31 @@ def construct_entries(
         zip(entry_ids, parsed_entries),
         desc=f"Constructing OPTIMADE {entry_config.entry_type} entries",
     ):
+        exceptions = {}
         for converter in OPTIMADE_CONVERTERS[entry_config.entry_type]:
             try:
-                entry = converter(entry).entry
+                entry = converter(entry, properties=entry_config.property_definitions)  # type: ignore[call-arg]
+                if not isinstance(entry, dict):
+                    entry = entry.entry
                 break
-            except Exception:
+            except Exception as exc:
+                exceptions[converter] = exc
                 continue
         else:
             raise RuntimeError(
-                f"Could not convert entry {entry} with any of the provided converters: {OPTIMADE_CONVERTERS[entry_config.entry_type]}"
+                f"Could not convert entry {entry} with any of the provided converters: {OPTIMADE_CONVERTERS[entry_config.entry_type]}. Errors: {exceptions}"
             )
 
-        entry.id = entry_id
+        if not isinstance(entry, dict):
+            entry = entry.dict()
+
+        if not entry["id"]:
+            entry["id"] = entry_id
 
         if entry_id in optimade_entries:
             raise RuntimeError(f"Duplicate entry ID found: {entry_id}")
 
-        optimade_entries[entry_id] = entry.dict()
+        optimade_entries[entry_id] = entry
 
     # Now try to parse the properties and assign them to OPTIMADE entries
     _parse_and_assign_properties(

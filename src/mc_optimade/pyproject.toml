@@ -6,14 +6,15 @@ dependencies = [
     "pydantic<2.0",
     "optimade[ase]~=0.25",
     "pyyaml~=6.0",
-    "pandas",
-    "pybtex",
-    "tqdm",
-    "requests",
+    "pymatgen~=2023.9",
+    "pandas~=2.1",
+    "pybtex~=0.24",
+    "tqdm~=4.66",
+    "requests~=2.31",
 ]
 
 [project.optional-dependencies]
-tests = ["pytest"]
+tests = ["pytest~=7.4"]
 dev = ["black", "ruff", "pre-commit", "mypy", "isort", "types-all"]
 
 [tool.ruff]
@@ -21,7 +22,7 @@ select = ["E", "F", "I", "W", "Q"]
 ignore = ["E501", "E402"]
 fixable = ["A", "B", "C", "D", "E", "F", "I"]
 unfixable = []
-target-version = "py310"
+target-version = "py311"
 per-file-ignores = {}
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
