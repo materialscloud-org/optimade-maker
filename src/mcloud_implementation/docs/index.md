@@ -7,13 +7,13 @@ This makes any structural data more discoverable, as structures and their
 properties will be returned alongside queries to other major [data
 providers](https://www.optimade.org/providers-dashboard/), and additionally
 enables future programmatic re-use of the data.
-This approach has already found use in select cases where AiiDA graphs were
+This approach has already found use in select cases where AiiDA databases were
 exported and stored by MCA, and subsequently exposed with OPTIMADE APIs, but now
 the functionality can be used on many common data types such as those understood
 by [ASE](https://wiki.fysik.dtu.dk/ase/) and [pymatgen](https://pymatgen.org).
 
 To enable this for an MCA submission, users must provide an additional config
-file at the top-level of their submission, named `optimade.yml`.
+file at the top-level of their submission, named `optimade.yaml`.
 The contents of this file will instruct the MCA data pipelines to ingest data
 from supported formats, then create and expose a queryable database.
 The full config file format, with examples, is described in the
@@ -70,4 +70,4 @@ entries:
 
 which will enable database queries over these properties, and easier re-use by other scientists.
 
-This full example, along with more complex examples, can be found on GitHub at [materialscloud-org/arcihve-optimade-integration](https://github.com/materialscloud-org/archive-optimade-integration/tree/main/src/mc_optimade/examples/folder_of_cifs).
+This full example, along with more complex examples, can be found on GitHub at [materialscloud-org/archive-optimade-integration](https://github.com/materialscloud-org/archive-optimade-integration/tree/main/src/mc_optimade/examples/folder_of_cifs).
