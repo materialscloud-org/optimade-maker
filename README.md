@@ -16,13 +16,15 @@ and hosted as [OPTIMADE APIs](https://optimade.org), enabling enhanced data disc
 explorability.
 
 This prototype repository contains two Python packages that work towards this
-aim.
+aim, as well as example scripts for deployment.
 
 - `mc_optimade`: defines a config file format for annotating archives and registered the desired OPTIMADE entries, and a workflow for ingesting them and converting into OPTIMADE types using pre-existing parsers (e.g., ASE for structures). The archive is converted into an intermediate [OPTIMADE JSON Lines](https://github.com/Materials-Consortia/OPTIMADE/issues/471#issuecomment-1589274856) format that can be ingested into a database and used to serve a full OPTIMADE API.
 - `optimade_launch`: provides a platform for launching an OPTIMADE API server
 from such a JSON lines file. It does so using the
 [`optimade-python-tools`](https://github.com/Materials-Consortia/optimade-python-tools/)
 reference server implementation.
+- `mcloud_implementation`: A set of tools and configuration used to deploy the
+"archive watcher" and associated scrapers for MCA.
 
 ## Relevant links
 
