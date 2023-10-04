@@ -4,9 +4,9 @@
 docker stop optimade_$1
 docker rm optimade_$1
 
-optimade-launch profile remove $1
+optimade-launch profile remove $1 --yes
 
-docker exec -it ubuntu_mongo_1 mongosh optimade_$1 --eval "db.dropDatabase()"
+#docker exec -it ubuntu_mongo_1 mongosh optimade_$1 --eval "db.dropDatabase()"
 
 sudo unlink /home/ubuntu/optimade-sockets/$1.sock
 

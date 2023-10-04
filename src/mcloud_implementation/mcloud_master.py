@@ -12,6 +12,9 @@ import docker
 from tqdm import tqdm
 
 import os
+import socket
+import json
+import subprocess
 
 from pathlib import Path
 
@@ -22,7 +25,10 @@ import click
 from datetime import datetime
 from urllib.parse import urljoin
 
-BASE_URL = "https://dev-optimade.materialscloud.org"
+import generate_apache_file
+
+SERVER_NAME = "dev-optimade.materialscloud.org"
+BASE_URL = f"https://{SERVER_NAME}"
 BASE_URL_INDEX = urljoin(BASE_URL, "/index")
 
 ARCHIVE_URL = "https://staging-archive.materialscloud.org/"
@@ -34,6 +40,12 @@ SOCKET_DIR = "/home/ubuntu/optimade-sockets/"
 METADB_NAME = "metadata"
 
 mongo_client = MongoClient("localhost", 27017)
+
+
+def _get_random_empty_port():
+    with socket.socket() as sock:
+        sock.bind(("", 0))
+        return sock.getsockname()[1]
 
 
 def _mongodb_name(doi_id):
@@ -93,6 +105,7 @@ def _download_entries_from_archive():
     * the subfolder already exists
     * the mongodb has a database with name "ab-cd"
     """
+    print()
     print("#### ---------------------------------------------")
     print("#### Checking MC archive")
     print("#### ---------------------------------------------")
@@ -146,6 +159,7 @@ def _convert_entries_to_jsonl():
     * mongodb exists
     """
 
+    print()
     print("#### ---------------------------------------------")
     print("#### Converting downloaded entries to jsonl")
     print("#### ---------------------------------------------")
@@ -197,6 +211,7 @@ def _populate_mongodbs():
     * mongodb exists
     """
 
+    print()
     print("#### ---------------------------------------------")
     print("#### Injecting the jsonl data to mongoDB")
     print("#### ---------------------------------------------")
@@ -246,6 +261,7 @@ def _start_containers():
     container running)
     """
 
+    print()
     print("#### ---------------------------------------------")
     print("#### Starting containers")
     print("#### ---------------------------------------------")
@@ -257,17 +273,17 @@ def _start_containers():
     existing_dbs = _get_optimade_mongodbs(mongo_client)
     print("Existing MongoDBs: ", existing_dbs)
 
-    import subprocess
-
     OLAUNCH_CONFIG_DIR = "/home/ubuntu/optimade-launch-configs"
 
     # Note: don't add the JSONL files here, as data was already injected separately
+    # Note: specifying :latest tag for the image doesn't always give the latest version
     olaunch_config_template = """
 ---
+image: ghcr.io/materials-consortia/optimade:0.25.3
 name: {DOI_ID}
 mongo_uri: mongodb://localhost:27017
 db_name: {DB_NAME}
-unix_sock: {SOCKET_PATH}
+port: {PORT}
 optimade_base_url: {BASE_URL}
 optimade_index_base_url: {BASE_URL_INDEX}
 optimade_provider:
@@ -291,7 +307,7 @@ optimade_provider:
                     olaunch_config_template.format(
                         DOI_ID=doi_id,
                         DB_NAME=_mongodb_name(doi_id),
-                        SOCKET_PATH=os.path.join(SOCKET_DIR, doi_id + ".sock"),
+                        PORT=_get_random_empty_port(),
                         BASE_URL=urljoin(BASE_URL, f"archive/{doi_id}"),
                         BASE_URL_INDEX=BASE_URL_INDEX,
                         ARCHIVE_URL=ARCHIVE_URL,
@@ -321,7 +337,29 @@ optimade_provider:
                 print(traceback.format_exc())
 
 
+def _update_apache_config():
+    print()
+    print("#### ---------------------------------------------")
+    print("#### Updating apache config")
+    print("#### ---------------------------------------------")
+    vhosts_loc = "/etc/apache2/sites-enabled/optimade-vhosts.conf"
+    with open(vhosts_loc, "w") as f:
+        f.write(
+            generate_apache_file.generate_vhosts(
+                server_name=SERVER_NAME, index_port=3214
+            )
+        )
+    print(f"Updated {vhosts_loc}!")
+    try:
+        # Use Docker Compose to start or restart the service
+        subprocess.run(["sudo", "systemctl", "reload", "apache2"])
+        print("Apache reloaded.")
+    except subprocess.CalledProcessError as e:
+        print(f"An error occurred: {e}")
+
+
 def _update_index():
+    print()
     print("#### ---------------------------------------------")
     print("#### Updating the index metadb")
     print("#### ---------------------------------------------")
@@ -338,8 +376,8 @@ def _update_index():
         },
     ]
 
-    for socket_file in Path(SOCKET_DIR).glob("*"):
-        doi_id = socket_file.stem
+    for container_name in _get_optimade_containers():
+        doi_id = container_name.split("optimade_")[1]
         entry = {
             "id": doi_id,
             "type": "links",
@@ -352,9 +390,6 @@ def _update_index():
         }
 
         index.append(entry)
-
-    import json
-    import subprocess
 
     INDEX_METADB_PATH = "/home/ubuntu/index-metadb"
 
@@ -382,10 +417,10 @@ def _update_index():
 
 def _update_landing_page():
     """
-    Update the landing page served at the root of the website based on the
-    unix socket files
+    Update the landing page served at the root of the website
     """
 
+    print()
     print("#### ---------------------------------------------")
     print("#### update landing page")
     print("#### ---------------------------------------------")
@@ -397,14 +432,14 @@ def _update_landing_page():
         landing_page_template = Template(f.read())
 
     rows = []
-    for socket_file in Path(SOCKET_DIR).glob("*"):
-        doi_id = socket_file.stem
+    for container_name in _get_optimade_containers():
+        doi_id = container_name.split("optimade_")[1]
         metadata = _get_record_metadata_processed(doi_id)
         rows.append([metadata.get("publication_date"), doi_id, metadata])
 
     # sort in ascending order by publication date
     # (entries without a date go to the end)
-    rows.sort(key=lambda x: (x[0] is None, x))
+    rows.sort(key=lambda x: (x[0] is not None, x), reverse=True)
 
     db_list_html = ""
     for row in rows:
@@ -439,6 +474,7 @@ def _update_landing_page():
 @click.option("--skip_convert", is_flag=True)
 @click.option("--skip_mongo_inject", is_flag=True)
 @click.option("--skip_containers", is_flag=True)
+@click.option("--skip_apache", is_flag=True)
 @click.option("--skip_index", is_flag=True)
 @click.option("--skip_landing", is_flag=True)
 def cli(
@@ -446,6 +482,7 @@ def cli(
     skip_convert,
     skip_mongo_inject,
     skip_containers,
+    skip_apache,
     skip_index,
     skip_landing,
 ):
@@ -461,6 +498,8 @@ def cli(
         _populate_mongodbs()
     if not skip_containers:
         _start_containers()
+    if not skip_apache:
+        _update_apache_config()
     if not skip_index:
         _update_index()
     if not skip_landing:
