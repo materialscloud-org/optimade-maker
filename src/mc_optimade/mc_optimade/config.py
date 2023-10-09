@@ -52,7 +52,7 @@ class ParsedFiles(BaseModel):
         description="The path to an archive or file to be unzipped/decompressed."
     )
 
-    matches: list[str] = Field(
+    matches: Optional[list[str]] = Field(
         description="A list of matches to be used to filter the file contents. Each match can use simple '*' wildcard syntax.",
         examples=[["structures/*.cif", "relaxed-structures/1.cif"]],
     )
@@ -78,10 +78,11 @@ class EntryConfig(BaseModel):
 
     @validator("entry_type")
     def check_optimade_entry_type(cls, v):
-        if v not in ("structures", "references") and not v.startswith("_"):
-            raise ValueError(
-                f"OPTIMADE entry type must be either 'structures', 'references', or contain a custom prefix, not {v}"
-            )
+        if not isinstance(v, JSONLConfig):
+            if v not in ("structures", "references") and not v.startswith("_"):
+                raise ValueError(
+                    f"OPTIMADE entry type must be either 'structures', 'references', or contain a custom prefix, not {v}"
+                )
 
         return v
 
@@ -127,10 +128,11 @@ class Config(BaseModel):
 
     @validator("entries")
     def check_one_entry_per_type(cls, v):
-        if len({e.entry_type for e in v}) != len(v):
-            raise ValueError(
-                "Each entry type must be listed only once in the config file."
-            )
+        if not isinstance(v, JSONLConfig):
+            if len({e.entry_type for e in v}) != len(v):
+                raise ValueError(
+                    "Each entry type must be listed only once in the config file."
+                )
         return v
 
     @staticmethod

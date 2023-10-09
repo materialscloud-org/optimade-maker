@@ -66,8 +66,8 @@ def convert_archive(archive_path: Path) -> Path:
     # if the config specifies just a JSON-L, then extract any archives
     # and return the JSONL path
     if isinstance(mc_config.entries, JSONLConfig):
-        if mc_config.entries.archive_file is not None:
-            inflate_archive(Path(archive_path), Path(mc_config.entries.archive_file))
+        if mc_config.entries.file is not None:
+            inflate_archive(Path(archive_path), Path(mc_config.entries.file))
         return Path(archive_path) / mc_config.entries.jsonl_path
 
     # first, decompress any provided data paths
