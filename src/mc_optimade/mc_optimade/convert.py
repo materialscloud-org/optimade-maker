@@ -4,6 +4,7 @@ OPTIMADE API.
 
 """
 
+import os
 import warnings
 from collections import defaultdict
 from pathlib import Path
@@ -15,6 +16,8 @@ from optimade.server.schemas import ENTRY_INFO_SCHEMAS, retrieve_queryable_prope
 
 from .config import Config, EntryConfig, JSONLConfig, ParsedFiles, PropertyDefinition
 from .parsers import ENTRY_PARSERS, OPTIMADE_CONVERTERS, PROPERTY_PARSERS, TYPE_MAP
+
+PROVIDER_PREFIX = os.environ.get("MC_OPTIMADE_PROVIDER_PREFIX", "mcloudarchive")
 
 
 def _construct_entry_type_info(
@@ -87,7 +90,7 @@ def convert_archive(archive_path: Path) -> Path:
 
     for entry in mc_config.entries:
         optimade_entries[entry.entry_type].extend(
-            construct_entries(archive_path, entry, mc_config.provider_prefix).values()
+            construct_entries(archive_path, entry, PROVIDER_PREFIX).values()
         )
 
     property_definitions = defaultdict(list)
@@ -98,7 +101,7 @@ def convert_archive(archive_path: Path) -> Path:
         archive_path,
         optimade_entries,
         property_definitions,
-        mc_config.provider_prefix,
+        PROVIDER_PREFIX,
     )
 
     return jsonl_path
