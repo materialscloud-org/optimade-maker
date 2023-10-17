@@ -277,7 +277,7 @@ def _parse_and_assign_properties(
             for parser in PROPERTY_PARSERS[file_ext]:
                 try:
                     properties = parser(_path)
-                    for id in parser(_path):
+                    for id in properties:
                         parsed_properties[id].update(properties[id])
                         all_property_fields |= set(properties[id].keys())
                     break
@@ -310,6 +310,9 @@ def _parse_and_assign_properties(
             # Loop over all defined properties and assign them to the entry, setting to None if missing
             # Also cast types if provided
             value = parsed_properties[id].get(property, None)
+            if property not in property_def_dict:
+                warnings.warn(f"Missing property definition for {property=}")
+                continue
             if value is not None and property_def_dict[property].type in TYPE_MAP:
                 value = TYPE_MAP[property_def_dict[property].type](value)
 
