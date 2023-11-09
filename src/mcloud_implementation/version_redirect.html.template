@@ -1,0 +1,22 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Materials Cloud OPTIMADE server</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="keywords" content="optimade,materials,crystals,database">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <style>
+        html { margin: 2em; }
+        h4, p { margin-left: 2em; }
+        span.version { background-color: lightgrey; font-weight: bold; font-family: monospace; padding: 0em 0.5em 0em 0.5em; border-radius: 1em; }
+    </style>
+    </head>
+    <body>
+    This archive entry has a new version available and the current one is not served any more.
+    <br/>
+    OPTIMADE API for the new version is available at $NEW_URL
+    </body>
+</html>

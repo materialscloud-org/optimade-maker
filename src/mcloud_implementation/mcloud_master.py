@@ -325,7 +325,14 @@ optimade_provider:
                 output = subprocess.check_output(command, shell=True).decode("utf-8")
                 print(output)
                 print(f"-- finished! Time: {time() - start_time:.2f}")
+            except subprocess.CalledProcessError:
+                print(
+                    f"INFO: {db} profile create excepted,"
+                    "but continuing with server start..."
+                )
+                print(traceback.format_exc())
 
+            try:
                 print("---- optimade-launch server start")
                 start_time = time()
                 command = f"optimade-launch -vvv server start -p {doi_id}"
@@ -427,7 +434,7 @@ def _update_landing_page():
 
     from string import Template
 
-    p = Path(__file__).with_name("landing_page.html.template")
+    p = Path(__file__).parent / "landing_page" / "index.html.template"
     with p.open("r") as f:
         landing_page_template = Template(f.read())
 
@@ -444,29 +451,24 @@ def _update_landing_page():
     db_list_html = ""
     for row in rows:
         date, doi_id, metadata = row
-        base_url = urljoin(BASE_URL, f"archive/{doi_id}")
-        metadata_html = ""
+        date_val = "-"
+        title_val = "-"
         if date:
-            metadata_html = f"<a href='{metadata.get('url')}'>"
-            metadata_html += date.strftime("%Y.%m.%d") + " "
-            metadata_html += (
-                f"{metadata.get('title')} (version v{metadata.get('version')})"
-            )
-            metadata_html += "</a>; "
-
+            date_val = date.strftime("%Y.%m.%d")
+            title_val = f"<a href='{metadata.get('url')}'>"
+            title_val += metadata.get("title")
+            ver = metadata.get("version")
+            if ver > 1:
+                title_val += f" (version v{ver})"
+            title_val += "</a>"
+        endpoint = f"<a href='/archive/{doi_id}'>/archive/{doi_id}</a>"
         db_list_html += (
-            f"<li>{metadata_html}OPTIMADE endpoint:"
-            + f"<a href='{base_url}'>{base_url}</a></li>\n"
+            f"<tr><td>{date_val}</td><td>{title_val}</td><td>{endpoint}</td></tr>"
         )
 
     index_html_loc = "/var/www/html/index.html"
     with open(index_html_loc, "w") as f:
-        f.write(
-            landing_page_template.substitute(
-                HTML_DB_LIST_ENTRIES=db_list_html,
-                INDEX_BASE_URL=BASE_URL_INDEX,
-            )
-        )
+        f.write(landing_page_template.substitute(HTML_TABLE_ROWS=db_list_html))
 
 
 @click.command()
