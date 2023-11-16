@@ -17,6 +17,7 @@ def inject_data(client: MongoClient, filename: str, database: str):
     entry_collections = {
         entry_type: db[f"{entry_type}"] for entry_type in supported_entry_types
     }
+    entry_collections["info"] = db["info"]  # all other lines from the jsonl file
     batch = collections.defaultdict(list)
 
     with open(Path(__file__).parent.joinpath(filename)) as handle:
@@ -24,14 +25,18 @@ def inject_data(client: MongoClient, filename: str, database: str):
             for json_str in handle:
                 entry = bson.json_util.loads(json_str)
 
+                if "x-optimade" in entry:
+                    # skip the first line
+                    continue
+
                 if "type" not in entry:
-                    LOGGER.info(f"Skipping line (no type defined): {json_str}")
+                    entry_collections["info"].insert_one(entry)
                     continue
 
                 entry_type = entry["type"]
 
                 if entry_type not in supported_entry_types:
-                    LOGGER.info(f"Skipping line (type not supported): {json_str}")
+                    entry_collections["info"].insert_one(entry)
                     continue
 
                 inp_data = entry["attributes"]
