@@ -1,4 +1,0 @@
-pymongo
-docker
-tqdm
-click
