@@ -17,11 +17,11 @@ def pybtex_to_optimade(bib_entry: Any, properties=None) -> EntryResource:
     raise NotImplementedError
 
 
-def load_csv_file(p: Path) -> dict[str, dict[str, Any]]:
+def load_csv_file(p: Path, id_key: str = "id") -> dict[str, dict[str, Any]]:
     """Parses a CSV file found at path `p` and returns a dictionary
     of properties keyed by ID.
 
-    Requires the `id` column to be present in the CSV file, which will
+    Will use the first column that contains the substring "id", which will
     be matched with the generated IDs.
 
     Returns:
@@ -30,10 +30,16 @@ def load_csv_file(p: Path) -> dict[str, dict[str, Any]]:
     """
     df = pandas.read_csv(p)
     if "id" not in df:
-        raise RuntimeError(
-            "CSV file {p} must have an 'id' column: not just {df.columns}"
-        )
+        id_keys = [f for f in df.columns if "id" in f.lower()]
+        if not id_keys:
+            raise RuntimeError(
+                f"CSV file {p} must have a column containing 'id' : not just {df.columns}"
+            )
+        id_key = id_keys[0]
 
+    # Copy found ID key and rename it to 'id'
+    if id_key != "id":
+        df["id"] = df[id_key]
     df = df.set_index("id")
 
     return df.to_dict(orient="index")
