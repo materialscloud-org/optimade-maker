@@ -35,3 +35,6 @@ follow_imports = "skip"
 [tool.isort]
 known_first_party = "mc_optimade"
 profile = "black"
+
+[project.scripts]
+optimake = "mc_optimade.cli:main"
