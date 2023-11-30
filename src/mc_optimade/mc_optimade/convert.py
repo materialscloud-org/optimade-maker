@@ -300,16 +300,21 @@ def _parse_and_assign_properties(
             f"Found {all_property_fields=} in data but {expected_property_fields} in config"
         )
 
-    for id in parsed_properties:
-        if id not in optimade_entries:
-            raise RuntimeError(
-                f"Found {id=} in properties but not in entries {optimade_entries.keys()=}"
-            )
+    # Look for precisely matching IDs, or 'filename' matches
+    for id in optimade_entries:
+
+        property_entry_id = id
+        if id not in parsed_properties:
+            property_entry_id = id.split("/")[-1].split(".")[0]
+            if property_entry_id not in parsed_properties:
+                raise RuntimeError(
+                    f"Found {id=}/{property_entry_id=} in properties but not in entries {optimade_entries.keys()=}"
+                )
 
         for property in all_property_fields:
             # Loop over all defined properties and assign them to the entry, setting to None if missing
             # Also cast types if provided
-            value = parsed_properties[id].get(property, None)
+            value = parsed_properties[property_entry_id].get(property, None)
             if property not in property_def_dict:
                 warnings.warn(f"Missing property definition for {property=}")
                 continue
