@@ -268,6 +268,10 @@ def _parse_and_assign_properties(
     parsed_properties: dict[str, dict[str, Any]] = defaultdict(dict)
     errors = []
     all_property_fields: set[str] = set()
+
+    if not property_matches_by_file:
+        return
+
     for archive_file in property_matches_by_file:
         for _path in tqdm.tqdm(
             property_matches_by_file[archive_file],
@@ -289,6 +293,11 @@ def _parse_and_assign_properties(
                     f"Could not parse properties file {_path} with any of the provided parsers {PROPERTY_PARSERS[file_ext]}. Errors: {errors}"
                 )
 
+    if not parsed_properties:
+        raise RuntimeError(
+            f"Could not parse properties files with any of the provided parsers. Errors: {errors}"
+        )
+
     # Match properties up to the descrptions provided in the config
     property_def_dict: dict[str, PropertyDefinition] = {
         p.name: p for p in property_definitions
@@ -308,7 +317,7 @@ def _parse_and_assign_properties(
             property_entry_id = id.split("/")[-1].split(".")[0]
             if property_entry_id not in parsed_properties:
                 raise RuntimeError(
-                    f"Found {id=}/{property_entry_id=} in properties but not in entries {optimade_entries.keys()=}"
+                    f"Found {id!r} or {property_entry_id!r} in entries but not in properties {parsed_properties.keys()=}"
                 )
 
         for property in all_property_fields:
