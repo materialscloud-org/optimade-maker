@@ -276,7 +276,7 @@ def _parse_and_assign_properties(
             file_ext = _path.suffix
             for parser in PROPERTY_PARSERS[file_ext]:
                 try:
-                    properties = parser(_path)
+                    properties = parser(_path, property_definitions)
                     for id in properties:
                         parsed_properties[id].update(properties[id])
                         all_property_fields |= set(properties[id].keys())

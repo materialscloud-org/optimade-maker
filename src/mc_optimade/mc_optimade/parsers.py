@@ -17,12 +17,19 @@ def pybtex_to_optimade(bib_entry: Any, properties=None) -> EntryResource:
     raise NotImplementedError
 
 
-def load_csv_file(p: Path, id_key: str = "id") -> dict[str, dict[str, Any]]:
+def load_csv_file(
+    p: Path,
+    properties: list[PropertyDefinition] | None = None,
+) -> dict[str, dict[str, Any]]:
     """Parses a CSV file found at path `p` and returns a dictionary
     of properties keyed by ID.
 
     Will use the first column that contains the substring "id", which will
     be matched with the generated IDs.
+
+    Parameters:
+        p: Path to the CSV file.
+        properties: List of property definitions to extract from the CSV file.
 
     Returns:
         A dictionary of ID -> properties.
@@ -41,6 +48,14 @@ def load_csv_file(p: Path, id_key: str = "id") -> dict[str, dict[str, Any]]:
     if id_key != "id":
         df["id"] = df[id_key]
     df = df.set_index("id")
+
+    for prop in properties or []:
+        # loop through any property aliases, saving the value if found and only checking
+        # the real name if not
+        for alias in prop.aliases or []:
+            if alias in df:
+                df[prop.name] = df[alias]
+                break
 
     return df.to_dict(orient="index")
 
