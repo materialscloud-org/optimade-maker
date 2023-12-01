@@ -36,6 +36,7 @@ def load_csv_file(
 
     """
     df = pandas.read_csv(p)
+    id_key = "id"
     if "id" not in df:
         id_keys = [f for f in df.columns if "id" in f.lower()]
         if not id_keys:
