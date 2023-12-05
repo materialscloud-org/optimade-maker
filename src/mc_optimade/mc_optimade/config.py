@@ -46,6 +46,9 @@ Will be served with a provider-specific prefix in the actual API, so must not st
         description="A list of aliases to also search for for this property; `name` will be used for the field in the actual OPTIMADE API."
     )
 
+    class Config:
+        extra = "forbid"
+
 
 class ParsedFiles(BaseModel):
     file: str = Field(
@@ -56,6 +59,9 @@ class ParsedFiles(BaseModel):
         description="A list of matches to be used to filter the file contents. Each match can use simple '*' wildcard syntax.",
         examples=[["structures/*.cif", "relaxed-structures/1.cif"]],
     )
+
+    class Config:
+        extra = "forbid"
 
 
 class EntryConfig(BaseModel):
@@ -86,6 +92,9 @@ class EntryConfig(BaseModel):
 
         return v
 
+    class Config:
+        extra = "forbid"
+
 
 class JSONLConfig(BaseModel):
     """A description of a single JSON lines file that describes
@@ -100,6 +109,9 @@ class JSONLConfig(BaseModel):
     jsonl_path: str = Field(
         description="The path of the JSON-L file within the archive (or directly in the entry, if `archive_file` is `None`)."
     )
+
+    class Config:
+        extra = "forbid"
 
 
 class Config(BaseModel):
@@ -144,3 +156,6 @@ class Config(BaseModel):
         if values.get("config_version") is None:
             raise UnsupportedConfigVersion(f"Config version must be {__version__}.")
         return values
+
+    class Config:
+        extra = "forbid"
