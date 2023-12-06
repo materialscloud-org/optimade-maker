@@ -54,12 +54,18 @@ def _construct_entry_type_info(
     return EntryInfoResource(**info)
 
 
-def convert_archive(archive_path: Path) -> Path:
+def convert_archive(archive_path: Path, jsonl_path: Path | None = None) -> Path:
     """Convert an MCloud entry to an OPTIMADE JSONL file.
+
+    Parameters:
+        archive_path: The location of the `optimade.yaml` file to convert.
+        jsonl_path: The location to write the JSONL file to. If not provided,
+            write to `<archive_path>/optimade.jsonl`.
 
     Raises:
         FileNotFoundError: If any of the data paths in the config file,
             or config file itself, do not exist.
+        FileExistsError: If the JSONL file already exists at the provided path.
 
     """
 
@@ -102,6 +108,7 @@ def convert_archive(archive_path: Path) -> Path:
         optimade_entries,
         property_definitions,
         PROVIDER_PREFIX,
+        jsonl_path,
     )
 
     return jsonl_path
@@ -423,8 +430,17 @@ def write_optimade_jsonl(
     optimade_entries: dict[str, list[EntryResource]],
     property_definitions: dict[str, list[PropertyDefinition]],
     provider_prefix: str,
+    jsonl_path: Path | None = None,
 ) -> Path:
     """Write OPTIMADE entries to a JSONL file.
+
+    Parameters:
+        archive_path: Path to the archive.
+        optimade_entries: OPTIMADE entries to write.
+        property_definitions: Property definitions to write.
+        provider_prefix: Prefix to use for the provider.
+        jsonl_path: Path to write the JSONL file to. If not provided,
+            will write to `<archive_path>/optimade.jsonl`.
 
     Raises:
         RuntimeError: If the JSONL file already exists.
@@ -432,12 +448,13 @@ def write_optimade_jsonl(
     """
     import json
 
-    jsonl_path = archive_path / "optimade.jsonl"
+    if not jsonl_path:
+        jsonl_path = archive_path / "optimade.jsonl"
 
     if jsonl_path.exists():
         raise RuntimeError(f"Not overwriting existing file at {jsonl_path}")
 
-    with open(archive_path / "optimade.jsonl", "a") as jsonl:
+    with open(jsonl_path, "a") as jsonl:
         # write the optimade jsonl header
         header = {"x-optimade": {"meta": {"api_version": "1.1.0"}}}
         jsonl.write(json.dumps(header))
