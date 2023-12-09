@@ -43,4 +43,11 @@ jobs:
         pip install -e .[tests,dev]
 
     - name: Run tests
-      run: pytest -vv
+      run: pytest -vv --cov-report=xml
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        name: project
+        file: ./coverage.xml
+        flags: project
