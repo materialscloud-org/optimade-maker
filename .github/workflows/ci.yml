@@ -17,13 +17,9 @@ concurrency:
 
 jobs:
 
-  test-mc-optimade-package:
-    name: Test the `mc_optimade` package
+  tests:
+    name: Test the `optimake` package
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: src/mc_optimade
 
     steps:
     - uses: actions/checkout@v3
