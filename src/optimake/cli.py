@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from mc_optimade.convert import convert_archive
+from optimake.convert import convert_archive
 
 def main():
     parser = argparse.ArgumentParser(

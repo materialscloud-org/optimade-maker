@@ -12,7 +12,7 @@ Code for making [OPTIMADE APIs](https://optimade.org) from various formats of st
 This repository contains the following Python packages that work towards this
 aim:
 
-- `src/mc_optimade`: defines a config file format for annotating archives and registered the desired OPTIMADE entries, and a workflow for ingesting them and converting into OPTIMADE types using pre-existing parsers (e.g., ASE for structures). The archive is converted into an intermediate [OPTIMADE JSON Lines](https://github.com/Materials-Consortia/OPTIMADE/issues/471) format that can be ingested into a database and used to serve a full OPTIMADE API.
+- `src/optimake: defines a config file format for annotating archives and registered the desired OPTIMADE entries, and a workflow for ingesting them and converting into OPTIMADE types using pre-existing parsers (e.g., ASE for structures). The archive is converted into an intermediate [OPTIMADE JSON Lines](https://github.com/Materials-Consortia/OPTIMADE/issues/471) format that can be ingested into a database and used to serve a full OPTIMADE API.
 - `src/optimade_launch`: provides a platform for launching an OPTIMADE API server
 from such a JSON lines file. It does so using the
 [`optimade-python-tools`](https://github.com/Materials-Consortia/optimade-python-tools/)
@@ -33,7 +33,7 @@ entries:
 
 Run `optimake .` in the folder containing `structures.zip` and `optimade.yaml` to generate the jsonl file.
 
-See `src/mc_optimade/examples` for other supported formats and corresponding `optimade.yaml` config files.
+See `./examples` for other supported formats and corresponding `optimade.yaml` config files.
 
 
 ## Relevant links

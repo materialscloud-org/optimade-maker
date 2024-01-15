@@ -1,6 +1,6 @@
 import traceback
 
-from mc_optimade.config import UnsupportedConfigVersion
+from optimake.config import UnsupportedConfigVersion
 
 archive_url = "https://staging-archive.materialscloud.org/"
 test_record_id = 1408
@@ -8,7 +8,7 @@ test_record_id = 1408
 
 def test_archive_record_metadata():
     """Test ArchiveRecord to read metadata."""
-    from mc_optimade.archive.archive_record import ArchiveRecord
+    from optimake.archive.archive_record import ArchiveRecord
 
     try:
         record = ArchiveRecord(test_record_id, archive_url=archive_url)
@@ -22,7 +22,7 @@ def test_archive_record_process():
     """Test ArchiveRecord to download files."""
     import os
 
-    from mc_optimade.archive.archive_record import ArchiveRecord
+    from optimake.archive.archive_record import ArchiveRecord
 
     try:
         record = ArchiveRecord(

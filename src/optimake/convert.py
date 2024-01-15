@@ -17,7 +17,7 @@ from optimade.server.schemas import ENTRY_INFO_SCHEMAS, retrieve_queryable_prope
 from .config import Config, EntryConfig, JSONLConfig, ParsedFiles, PropertyDefinition
 from .parsers import ENTRY_PARSERS, OPTIMADE_CONVERTERS, PROPERTY_PARSERS, TYPE_MAP
 
-PROVIDER_PREFIX = os.environ.get("MC_OPTIMADE_PROVIDER_PREFIX", "mcloudarchive")
+PROVIDER_PREFIX = os.environ.get("optimake_PROVIDER_PREFIX", "mcloudarchive")
 
 
 def _construct_entry_type_info(
