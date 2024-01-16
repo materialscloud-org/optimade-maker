@@ -1,5 +1,5 @@
 [project]
-name = "mc_optimade"
+name = "optimake"
 version = "0.1"
 requires-python = ">=3.10"
 
@@ -34,8 +34,8 @@ ignore_missing_imports = true
 follow_imports = "skip"
 
 [tool.isort]
-known_first_party = "mc_optimade"
+known_first_party = "optimake"
 profile = "black"
 
 [project.scripts]
-optimake = "mc_optimade.cli:main"
+optimake = "optimake.cli:main"
