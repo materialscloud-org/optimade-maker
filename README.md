@@ -35,6 +35,28 @@ Run `optimake .` in the folder containing `structures.zip` and `optimade.yaml` t
 
 See `./examples` for other supported formats and corresponding `optimade.yaml` config files.
 
+### optimake JSONLines Format
+
+As described above, `optimake` works via an intermediate JSONLines file representation of an OPTIMADE API.
+This file should provide enough metadata to spin up an OPTIMADE API with many different entry types.
+The format is as follows:
+
+- First line must be a dictionary with the key x-optimade-api-version with value e.g., 1.2.0.
+- Then comes any other metadata under meta
+- Then corresponding info endpoint data for the types in the file
+- Then each line contains an entry from the corresponding endpoints
+
+```json
+{"x-optimade": {...}}
+{"meta": {"api_version": "1.1.0"}}
+{"data": {"type": "info", "attributes": {"provider": {...}}}
+{"info/structures": {"properties": ["_aiida_cell_volume": {"type": "number", ...}]}
+{"info/references": {...}}
+{"data": {"type": "structures", "id": "1234", "attributes": {...}}
+{"data": {"type": "structures", "id": "1235", "attributes": {...}}
+{"data": {"type": "references", "id": "sfdas", "attributes": {...}}
+```
+
 
 ## Relevant links
 
