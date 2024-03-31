@@ -359,18 +359,20 @@ def _parse_and_assign_properties(
 
     # Look for precisely matching IDs, or 'filename' matches
     for id in optimade_entries:
-        property_entry_id = id
-        if id not in parsed_properties:
+        # detect any other compatible IDs; either those matching immutable ID or those matching the filename rule
+        property_entry_id = optimade_entries[id]["attributes"].get("immutable_id", None)
+        if property_entry_id is None:
+            # try to find a matching ID based on the filename
             property_entry_id = id.split("/")[-1].split(".")[0]
-            if property_entry_id not in parsed_properties:
-                raise RuntimeError(
-                    f"Found {id!r} or {property_entry_id!r} in entries but not in properties {parsed_properties.keys()=}"
-                )
 
+        # Loop over all defined properties and assign them to the entry, setting to None if missing
+        # Also cast types if provided
         for property in all_property_fields:
-            # Loop over all defined properties and assign them to the entry, setting to None if missing
-            # Also cast types if provided
-            value = parsed_properties[property_entry_id].get(property, None)
+            # Look up both IDs: the file path-based ID or the ergonomic one
+            # Different property sources can use different ID schemes internally
+            value = parsed_properties.get(property_entry_id, {}).get(
+                property, None
+            ) or parsed_properties.get(id, {}).get(property, None)
             if property not in property_def_dict:
                 warnings.warn(f"Missing property definition for {property=}")
                 continue

@@ -2,8 +2,8 @@ import json
 import shutil
 from pathlib import Path
 
-import pytest
 import numpy as np
+import pytest
 from optimade.models import EntryInfoResource
 from optimake.convert import convert_archive
 
@@ -66,7 +66,9 @@ def test_convert_example_archives(archive_path, tmp_path):
             def check_arrays(reference, test, field):
                 ref_array = reference["attributes"].pop(field, None)
                 if ref_array:
-                    np.testing.assert_array_almost_equal(ref_array, test["attributes"].pop(field))
+                    np.testing.assert_array_almost_equal(
+                        ref_array, test["attributes"].pop(field)
+                    )
 
             # check JSON serialization of attributes compared to reference data, handling species and numerical arrays separately
             array_fields = ["cartesian_site_positions", "lattice_vectors"]
@@ -82,6 +84,6 @@ def test_convert_example_archives(archive_path, tmp_path):
                     sorted(first_entry_species, key=lambda _: _["name"])
                 ) == json.dumps(sorted(next_entry_species, key=lambda _: _["name"]))
 
-            assert json.dumps(first_entry["attributes"], sort_keys=True, indent=2) == json.dumps(
-                next_entry["attributes"], sort_keys=True, indent=2
-            )
+            assert json.dumps(
+                first_entry["attributes"], sort_keys=True, indent=2
+            ) == json.dumps(next_entry["attributes"], sort_keys=True, indent=2)
