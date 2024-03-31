@@ -261,6 +261,47 @@ def _parse_entries(
     return parsed_entries, entry_ids
 
 
+def _set_unique_entry_ids(entry_ids: list[str]) -> list[str]:
+    """Attempt to make the simplest unique set of entry IDs possible,
+    following a series of deterministic rules.
+
+    Parameters:
+        entry_ids: A list of entry IDs derived from file paths.
+
+    Returns:
+        A list of unique entry IDs.
+
+    """
+
+    new_ids: list[str] = list(entry_ids)
+    target_num_ids = len(entry_ids)
+    depth: int = 0
+    max_depth: int = 10  # somewhat arbitrary upper limit
+    # Loop through each filename and try to ablate directories until a unique set arises
+    while len(set(new_ids)) != target_num_ids and depth < max_depth:
+        for i, id in enumerate(entry_ids):
+            new_ids[i] = "/".join(id.split("/")[-1 - depth :])
+        depth += 1
+
+    # Now try to ablate any common file names, e.g,. subfolders of POSCARs (1/POSCAR, 2/POSCAR)
+    # Loop through each filename and try to ablate directories until a unique set arises
+    new_ids_sans_common_filenames = [
+        "/".join(new_id.split("/")[0:-2]) for new_id in new_ids
+    ]
+    if len(set(new_ids_sans_common_filenames)) == target_num_ids:
+        new_ids = new_ids_sans_common_filenames
+
+    # Now try to ablate any file extensions
+    new_ids_sans_extensions = [id.split(".")[0] for id in new_ids]
+    if len(set(new_ids_sans_extensions)) == target_num_ids:
+        return new_ids_sans_extensions
+
+    if len(set(new_ids)) != target_num_ids:
+        return entry_ids
+
+    return new_ids
+
+
 def _parse_and_assign_properties(
     optimade_entries: dict[str, EntryResource],
     property_matches_by_file: dict[str | None, list[Path]],
@@ -318,7 +359,6 @@ def _parse_and_assign_properties(
 
     # Look for precisely matching IDs, or 'filename' matches
     for id in optimade_entries:
-
         property_entry_id = id
         if id not in parsed_properties:
             property_entry_id = id.split("/")[-1].split(".")[0]

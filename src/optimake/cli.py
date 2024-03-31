@@ -1,11 +1,13 @@
 import argparse
 from pathlib import Path
+
 from optimake.convert import convert_archive
+
 
 def main():
     parser = argparse.ArgumentParser(
         prog="optimake",
-        description="Use an `optimade.yaml` config to describe archived data and create a OPTIMADE JSONL file for ingestion as an OPTIMADE API."
+        description="Use an `optimade.yaml` config to describe archived data and create a OPTIMADE JSONL file for ingestion as an OPTIMADE API.",
     )
     parser.add_argument("archive_path", help="The path to the archive to ingest.")
     parser.add_argument("--jsonl-path", help="The path to write the JSONL file to.")

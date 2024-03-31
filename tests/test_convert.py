@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 from optimade.models import EntryInfoResource
-
 from optimake.convert import convert_archive
 
 EXAMPLE_ARCHIVES = (Path(__file__).parent.parent / "examples").glob("*")
@@ -25,7 +24,7 @@ def test_convert_example_archives(archive_path, tmp_path):
 
     jsonl_path = convert_archive(tmp_path)
     assert jsonl_path.exists()
-    
+
     jsonl_path_custom = convert_archive(tmp_path, jsonl_path=tmp_path / "test.jsonl")
     assert jsonl_path_custom.exists()
 
