@@ -4,6 +4,7 @@ OPTIMADE API.
 
 """
 
+import datetime
 import os
 import warnings
 from collections import defaultdict
@@ -273,7 +274,53 @@ def _parse_entries(
                     f"None of the provided parsers {ENTRY_PARSERS[entry_type]} could parse {_path}. Errors: {exceptions}"
                 )
 
+    if len(set(entry_ids)) != len(entry_ids):
+        raise RuntimeError(
+            "Duplicate entry IDs found even when generated directly from filepaths. This should not be possible."
+        )
+
     return parsed_entries, entry_ids
+
+
+def _set_unique_entry_ids(entry_ids: list[str]) -> list[str]:
+    """Attempt to make the simplest unique set of entry IDs possible,
+    following a series of deterministic rules.
+
+    Parameters:
+        entry_ids: A list of entry IDs derived from file paths.
+
+    Returns:
+        A list of unique entry IDs.
+
+    """
+
+    new_ids: list[str] = list(entry_ids)
+    target_num_ids = len(entry_ids)
+    depth: int = 0
+    max_depth: int = 10  # somewhat arbitrary upper limit
+    # Loop through each filename and try to ablate directories until a unique set arises
+    while len(set(new_ids)) != target_num_ids and depth < max_depth:
+        for i, id in enumerate(entry_ids):
+            new_ids[i] = "/".join(id.split("/")[-1 - depth :])
+        depth += 1
+
+    # Now try to ablate any common file names, e.g,. subfolders of POSCARs (1/POSCAR, 2/POSCAR)
+    # Loop through each filename and try to ablate directories until a unique set arises
+    new_ids_sans_common_filenames = [
+        "/".join(new_id.split("/")[0:-2]) for new_id in new_ids
+    ]
+    if len(set(new_ids_sans_common_filenames)) == target_num_ids:
+        new_ids = new_ids_sans_common_filenames
+
+    # Now try to ablate any file extensions
+    new_ids_sans_extensions = [id.split(".")[0] for id in new_ids]
+    if len(set(new_ids_sans_extensions)) == target_num_ids:
+        return new_ids_sans_extensions
+
+    if len(set(new_ids)) != target_num_ids:
+        return entry_ids
+
+    return new_ids
 
 
 def _parse_and_assign_properties(
@@ -385,11 +432,14 @@ def construct_entries(
     _check_missing(entry_matches_by_file)
 
     # Parse into intermediate format
-    parsed_entries, entry_ids = _parse_entries(
+    parsed_entries, file_path_entry_ids = _parse_entries(
         archive_path,
         entry_matches_by_file,
         entry_config.entry_type,
     )
+
+    # Generate a better set of entry IDs
+    unique_entry_ids = _set_unique_entry_ids(file_path_entry_ids)
 
     # Parse properties
     property_matches_by_file: dict[str | None, list[Path]] = _get_matches(
@@ -397,10 +447,12 @@ def construct_entries(
     )
     _check_missing(property_matches_by_file)
 
+    timestamp = datetime.datetime.now().isoformat()
+
     # Construct OPTIMADE entries from intermediate format
     optimade_entries: dict[str, EntryResource] = {}
-    for entry_id, entry in tqdm.tqdm(
-        zip(entry_ids, parsed_entries),
+    for file_path_entry_id, unique_entry_id, entry in tqdm.tqdm(
+        zip(file_path_entry_ids, unique_entry_ids, parsed_entries),
         desc=f"Constructing OPTIMADE {entry_config.entry_type} entries",
     ):
         exceptions = {}
@@ -422,12 +474,16 @@ def construct_entries(
             entry = entry.dict()
 
         if not entry["id"]:
-            entry["id"] = entry_id
+            entry["id"] = unique_entry_id
 
-        if entry_id in optimade_entries:
-            raise RuntimeError(f"Duplicate entry ID found: {entry_id}")
+        if entry["id"] in optimade_entries:
+            raise RuntimeError(f"Duplicate entry ID found: {entry['id']}")
 
-        optimade_entries[entry_id] = entry
+        optimade_entries[entry["id"]] = entry
+
+        if not entry["attributes"].get("immutable_id"):
+            entry["attributes"]["immutable_id"] = file_path_entry_id
+        entry["attributes"]["last_modified"] = timestamp
 
     # Now try to parse the properties and assign them to OPTIMADE entries
     _parse_and_assign_properties(

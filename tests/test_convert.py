@@ -87,3 +87,54 @@ def test_convert_example_archives(archive_path, tmp_path):
             assert json.dumps(
                 first_entry["attributes"], sort_keys=True, indent=2
             ) == json.dumps(next_entry["attributes"], sort_keys=True, indent=2)
+
+
+def test_unique_id_generator():
+    """Unit tests for some common cases of the unique ID generator."""
+
+    from optimake.convert import _set_unique_entry_ids
+
+    entry_ids = [
+        "data/structures/1.cif",
+        "data/structures/2.cif",
+        "data/structures/3.cif",
+    ]
+    assert _set_unique_entry_ids(entry_ids) == ["1", "2", "3"]
+
+    entry_ids = ["data/structures/1", "data/structures/2", "data/structures/3"]
+    assert _set_unique_entry_ids(entry_ids) == ["1", "2", "3"]
+
+    entry_ids = [
+        "data/structures/1/POSCAR",
+        "data/structures/2/POSCAR",
+        "data/structures/3/POSCAR",
+    ]
+    assert _set_unique_entry_ids(entry_ids) == ["1", "2", "3"]
+
+    entry_ids = [
+        "data1/structures/1/POSCAR",
+        "data2/structures/1/POSCAR",
+        "data3/structures/1/POSCAR",
+    ]
+    assert _set_unique_entry_ids(entry_ids) == entry_ids
+
+    entry_ids = [
+        "data.zip/data/structures/1.cif",
+        "data.zip/data/structures/2.cif",
+        "data.zip/data/structures/3.cif",
+    ]
+    assert _set_unique_entry_ids(entry_ids) == ["1", "2", "3"]
+
+    entry_ids = [
+        "data.tar.gz/data/structures/1.cif",
+        "data.tar.gz/data/structures/2.cif",
+        "data.tar.gz/data/structures/3.cif",
+    ]
+    assert _set_unique_entry_ids(entry_ids) == ["1", "2", "3"]
+
+    entry_ids = [
+        "data.tar.gz/data/structures/1.cif.gz",
+        "data.tar.gz/data/structures/2.cif.gz",
+        "data.tar.gz/data/structures/3.cif.gz",
+    ]
+    assert _set_unique_entry_ids(entry_ids) == ["1", "2", "3"]
