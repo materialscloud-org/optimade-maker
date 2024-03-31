@@ -70,6 +70,6 @@ def test_convert_example_archives(archive_path, tmp_path):
             for key in ("id", "type", "relationships"):
                 assert next_entry[key] == first_entry[key]
 
-            json.dumps(first_entry["attributes"]) == json.dumps(
+            assert json.dumps(first_entry["attributes"]) == json.dumps(
                 next_entry["attributes"]
             )
