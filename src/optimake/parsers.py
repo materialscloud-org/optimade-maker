@@ -61,7 +61,9 @@ def load_csv_file(
     return df.to_dict(orient="index")
 
 
-PROPERTY_PARSERS: dict[str, list[Callable[[Path], Any]]] = {
+PROPERTY_PARSERS: dict[
+    str, list[Callable[[Path, list[PropertyDefinition] | None], Any]]
+] = {
     ".csv": [load_csv_file],
 }
 

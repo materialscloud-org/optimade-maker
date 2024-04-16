@@ -1,4 +1,5 @@
 import click
+
 from .scan_records import scan_records
 
 

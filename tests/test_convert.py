@@ -2,9 +2,9 @@ import json
 import shutil
 from pathlib import Path
 
+import numpy as np
 import pytest
 from optimade.models import EntryInfoResource
-
 from optimake.convert import convert_archive
 
 EXAMPLE_ARCHIVES = (Path(__file__).parent.parent / "examples").glob("*")
@@ -25,7 +25,7 @@ def test_convert_example_archives(archive_path, tmp_path):
 
     jsonl_path = convert_archive(tmp_path)
     assert jsonl_path.exists()
-    
+
     jsonl_path_custom = convert_archive(tmp_path, jsonl_path=tmp_path / "test.jsonl")
     assert jsonl_path_custom.exists()
 
@@ -60,16 +60,30 @@ def test_convert_example_archives(archive_path, tmp_path):
                     False
                 ), "No structures found in archive but test first entry was provided"
 
-            # @ml-evs: species is the only key that can be written in any order, so here we
-            # just sort before comparing. This will be fixed in the next optimade-python-tools
-            if species := next_entry.get("attributes", {}).get("species"):
-                next_entry["attributes"]["species"] = sorted(
-                    species, key=lambda x: x["name"]
-                )
-
             for key in ("id", "type", "relationships"):
                 assert next_entry[key] == first_entry[key]
 
-            json.dumps(first_entry["attributes"]) == json.dumps(
-                next_entry["attributes"]
-            )
+            def check_arrays(reference, test, field):
+                ref_array = reference["attributes"].pop(field, None)
+                if ref_array:
+                    np.testing.assert_array_almost_equal(
+                        ref_array, test["attributes"].pop(field)
+                    )
+
+            # check JSON serialization of attributes compared to reference data, handling species and numerical arrays separately
+            array_fields = ["cartesian_site_positions", "lattice_vectors"]
+            for field in array_fields:
+                check_arrays(first_entry, next_entry, field)
+                first_entry.pop(field, None)
+                next_entry.pop(field, None)
+
+            first_entry_species = first_entry["attributes"].pop("species", None)
+            next_entry_species = next_entry["attributes"].pop("species", None)
+            if first_entry_species:
+                assert json.dumps(
+                    sorted(first_entry_species, key=lambda _: _["name"])
+                ) == json.dumps(sorted(next_entry_species, key=lambda _: _["name"]))
+
+            assert json.dumps(
+                first_entry["attributes"], sort_keys=True, indent=2
+            ) == json.dumps(next_entry["attributes"], sort_keys=True, indent=2)

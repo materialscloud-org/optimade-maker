@@ -6,8 +6,7 @@ from optimake.archive.utils import get_all_records, get_parsed_records
 DEFAULT_ARCHIVE_URL = "https://archive.materialscloud.org/"
 
 
-
-def process_records(records: list, archive_url: str=DEFAULT_ARCHIVE_URL):
+def process_records(records: list, archive_url: str = DEFAULT_ARCHIVE_URL):
     """
     Scan the Materials Cloud Archive entries, read the file info
     and check if there is a file called "optimade.y(ml|aml)".

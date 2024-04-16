@@ -38,6 +38,10 @@ jobs:
         pip install -U setuptools wheel
         pip install -e .[tests,dev]
 
+    - name: Run linters
+      run: |
+        pre-commit run --all-files
+
     - name: Run tests
       run: pytest -vv --cov-report=xml --cov-report=term ./tests
 
