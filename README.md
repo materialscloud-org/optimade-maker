@@ -48,7 +48,7 @@ The format is as follows:
 ```json
 {"x-optimade": {"meta": {"api_version": "1.1.0"}}}
 {"type": "info", "id": "structures", "properties": {...}}
-{"type": "info", "id": "references", properties": {...}}
+{"type": "info", "id": "references", "properties": {...}}
 {"type": "structures", "id": "1234", "attributes": {...}}
 {"type": "structures", "id": "1235", "attributes": {...}}
 {"type": "references", "id": "sfdas", "attributes": {...}}
