@@ -4,7 +4,6 @@
 </span>
 </div>
 
-
 # <div align="center">optimade-maker</div>
 
 Code for making [OPTIMADE APIs](https://optimade.org) from various formats of structural data (e.g. an archive of CIF files).
@@ -12,15 +11,15 @@ Code for making [OPTIMADE APIs](https://optimade.org) from various formats of st
 This repository contains the following Python packages that work towards this
 aim:
 
-- `src/optimake`: defines a config file format for annotating archives and registered the desired OPTIMADE entries, and a workflow for ingesting them and converting into OPTIMADE types using pre-existing parsers (e.g., ASE for structures). The archive is converted into an intermediate [OPTIMADE JSON Lines](https://github.com/Materials-Consortia/OPTIMADE/issues/471) format that can be ingested into a database and used to serve a full OPTIMADE API.
+- `src/optimake`: defines a config file format for annotating archives and registered the desired OPTIMADE entries, and a workflow for ingesting them and converting into OPTIMADE types using pre-existing parsers (e.g., ASE for structures). The archive is converted into an intermediate JSONLines file format that can be ingested into a database and used to serve a full OPTIMADE API.
 - `src/optimade_launch`: provides a platform for launching an OPTIMADE API server
-from such a JSON lines file. It does so using the
-[`optimade-python-tools`](https://github.com/Materials-Consortia/optimade-python-tools/)
-reference server implementation.
+  from such a JSON lines file. It does so using the
+  [`optimade-python-tools`](https://github.com/Materials-Consortia/optimade-python-tools/)
+  reference server implementation.
 
 ## Usage
 
-To generate an [OPTIMADE JSON Lines](https://github.com/Materials-Consortia/OPTIMADE/issues/471) file, the structural data needs to be accompanied by an `optimade.yaml` config file. A minimal example for a zip archive (`structures.zip`) of cif files is the following:
+To generate an optimake JSONLines file, the structural data needs to be accompanied by an `optimade.yaml` config file. A minimal example for a zip archive (`structures.zip`) of cif files is the following:
 
 ```
 entries:
@@ -35,28 +34,27 @@ Run `optimake .` in the folder containing `structures.zip` and `optimade.yaml` t
 
 See `./examples` for other supported formats and corresponding `optimade.yaml` config files.
 
-### optimake JSONLines Format
+## optimake JSONLines Format
 
 As described above, `optimake` works via an intermediate JSONLines file representation of an OPTIMADE API.
 This file should provide enough metadata to spin up an OPTIMADE API with many different entry types.
 The format is as follows:
 
-- First line must be a dictionary with the key x-optimade-api-version with value e.g., 1.2.0.
-- Then comes any other metadata under meta
-- Then corresponding info endpoint data for the types in the file
-- Then each line contains an entry from the corresponding endpoints
+- First line must be a dictionary with the key `x-optimade`, containing a sub-dictionary of metadata (such as the OPTIMADE API version).
+- Second line contains the `info/structures` endpoint.
+- Third line contains the `info/references` endpoint, if present.
+- Then each line contains an entry from the corresponding individual structure/reference endpoints.
 
 ```json
-{"x-optimade": {...}}
-{"meta": {"api_version": "1.1.0"}}
-{"data": {"type": "info", "attributes": {"provider": {...}}}
-{"info/structures": {"properties": ["_aiida_cell_volume": {"type": "number", ...}]}
-{"info/references": {...}}
-{"data": {"type": "structures", "id": "1234", "attributes": {...}}
-{"data": {"type": "structures", "id": "1235", "attributes": {...}}
-{"data": {"type": "references", "id": "sfdas", "attributes": {...}}
+{"x-optimade": {"meta": {"api_version": "1.1.0"}}}
+{"properties": {...}}
+{"properties": {...}}
+{"type": "structures", "id": "1234", "attributes": {...}}
+{"type": "structures", "id": "1235", "attributes": {...}}
+{"type": "references", "id": "sfdas", "attributes": {...}}
 ```
 
+NOTE: the `info/` endpoints in [OPTIMADE v1.2.0](https://www.optimade.org/specification/#entry-listing-info-endpoints) will include `type` and `id` as well.
 
 ## Relevant links
 
