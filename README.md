@@ -36,7 +36,7 @@ See `./examples` for other supported formats and corresponding `optimade.yaml` c
 
 ## optimake JSONLines Format
 
-As described above, `optimake` works via an intermediate JSONLines file representation of an OPTIMADE API.
+As described above, `optimake` works via an intermediate JSONLines file representation of an OPTIMADE API (see also the [corresponding issue in the specification](https://github.com/Materials-Consortia/OPTIMADE/issues/471)).
 This file should provide enough metadata to spin up an OPTIMADE API with many different entry types.
 The format is as follows:
 
