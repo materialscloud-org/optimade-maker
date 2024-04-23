@@ -23,6 +23,9 @@ def test_convert_example_archives(archive_path, tmp_path):
     tmp_path = tmp_path / archive_path.name
     shutil.copytree(archive_path, tmp_path)
 
+    # remove 'optimade.jsonl' if the example was already run
+    (tmp_path / "optimade.jsonl").unlink(missing_ok=True)
+
     jsonl_path = convert_archive(tmp_path)
     assert jsonl_path.exists()
 
