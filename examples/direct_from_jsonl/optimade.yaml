@@ -4,4 +4,4 @@ database_description: >-
   This database contains some example CIFs.
 
 entries:
-  jsonl_path: example.jsonl
+  jsonl_path: optimade.jsonl
