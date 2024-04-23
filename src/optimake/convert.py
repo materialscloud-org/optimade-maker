@@ -72,12 +72,21 @@ def convert_archive(archive_path: Path, jsonl_path: Path | None = None) -> Path:
     # load the config from the root of the archive
     mc_config = Config.from_file(archive_path / "optimade.yaml")
 
+    if not jsonl_path:
+        jsonl_path = archive_path / "optimade.jsonl"
+
     # if the config specifies just a JSON-L, then extract any archives
     # and return the JSONL path
     if isinstance(mc_config.entries, JSONLConfig):
         if mc_config.entries.file is not None:
-            inflate_archive(Path(archive_path), Path(mc_config.entries.file))
-        return Path(archive_path) / mc_config.entries.jsonl_path
+            inflate_archive(archive_path, Path(mc_config.entries.file))
+        src_jsonl_path = archive_path / mc_config.entries.jsonl_path
+        if jsonl_path != src_jsonl_path:
+            # add a symlink to the specified jsonl_path
+            if jsonl_path.exists():
+                raise RuntimeError(f"Not overwriting existing file at {jsonl_path}")
+            jsonl_path.symlink_to(archive_path / src_jsonl_path)
+        return jsonl_path
 
     # first, decompress any provided data paths
     data_paths: set[Path] = set()
