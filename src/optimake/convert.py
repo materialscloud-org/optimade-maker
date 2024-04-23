@@ -161,10 +161,16 @@ def inflate_archive(archive_path: Path, data_path: Path) -> None:
 
         # Get the compressed data and immediately write it back out, stripping
         # the compression suffix
+        CHUNK_SIZE = 10 * 1024 * 1024  # 10 MB
         if compressed_open:
-            with compressed_open(real_path, "r") as zip:
-                with open(real_path.with_suffix(""), "w") as f:
-                    f.write(zip.read().decode("utf-8"))
+            with compressed_open(real_path, "rb") as compressed_file:
+                with open(real_path.with_suffix(""), "wb") as output_file:
+                    # Read and write data in chunks to conserve memory
+                    while True:
+                        chunk = compressed_file.read(CHUNK_SIZE)
+                        if not chunk:
+                            break
+                        output_file.write(chunk)
 
     return
 
