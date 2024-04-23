@@ -10,7 +10,7 @@ from optimake.convert import convert_archive
 EXAMPLE_ARCHIVES = (Path(__file__).parent.parent / "examples").glob("*")
 
 
-@pytest.mark.parametrize("archive_path", EXAMPLE_ARCHIVES)
+@pytest.mark.parametrize("archive_path", EXAMPLE_ARCHIVES, ids=lambda path: path.name)
 def test_convert_example_archives(archive_path, tmp_path):
     """This test will run through all examples in the examples folder and
     attempt to convert them to OPTIMADE data following the provided config.
