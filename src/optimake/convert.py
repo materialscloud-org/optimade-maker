@@ -296,21 +296,32 @@ def _set_unique_entry_ids(entry_ids: list[str]) -> list[str]:
 
     new_ids: list[str] = list(entry_ids)
     target_num_ids = len(entry_ids)
-    depth: int = 0
-    max_depth: int = 10  # somewhat arbitrary upper limit
-    # Loop through each filename and try to ablate directories until a unique set arises
-    while len(set(new_ids)) != target_num_ids and depth < max_depth:
-        for i, id in enumerate(entry_ids):
-            new_ids[i] = "/".join(id.split("/")[-1 - depth :])
-        depth += 1
+
+    def _strip_common_dirs(new_ids):
+        depth: int = 0
+        max_depth: int = 10  # somewhat arbitrary upper limit
+        # Loop through each filename and try to ablate directories to reach the smallest unique set
+        while len(set(new_ids)) == target_num_ids and depth < max_depth:
+            trial_ids = ["/".join(id.split("/")[depth + 1:]) for id in new_ids]
+            if len(set(trial_ids)) == target_num_ids:
+                new_ids = trial_ids
+            else:
+                break
+            depth += 1
+
+        return new_ids
+
+    new_ids = _strip_common_dirs(new_ids)
 
     # Now try to ablate any common file names, e.g,. subfolders of POSCARs (1/POSCAR, 2/POSCAR)
     # Loop through each filename and try to ablate directories until a unique set arises
     new_ids_sans_common_filenames = [
-        "/".join(new_id.split("/")[0:-2]) for new_id in new_ids
+        "/".join(new_id.split("/")[0:-1]) for new_id in new_ids
     ]
     if len(set(new_ids_sans_common_filenames)) == target_num_ids:
         new_ids = new_ids_sans_common_filenames
+
+    new_ids = _strip_common_dirs(new_ids)
 
     # Now try to ablate any file extensions
     new_ids_sans_extensions = [id.split(".")[0] for id in new_ids]
@@ -475,6 +486,10 @@ def construct_entries(
 
         if not entry["id"]:
             entry["id"] = unique_entry_id
+        else:
+            # If entry ID is already set, this means it has been hardcoded somehow in the submitted data
+            # so this should also be used for the immutable ID
+            entry["attributes"]["immutable_id"] = entry["id"]
 
         if entry["id"] in optimade_entries:
             raise RuntimeError(f"Duplicate entry ID found: {entry['id']}")
@@ -483,6 +498,7 @@ def construct_entries(
 
         if not entry["attributes"].get("immutable_id"):
             entry["attributes"]["immutable_id"] = file_path_entry_id
+
         entry["attributes"]["last_modified"] = timestamp
 
     # Now try to parse the properties and assign them to OPTIMADE entries

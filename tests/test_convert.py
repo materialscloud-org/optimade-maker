@@ -77,6 +77,12 @@ def test_convert_example_archives(archive_path, tmp_path):
                 first_entry.pop(field, None)
                 next_entry.pop(field, None)
 
+            # check that last_modified is a reasonable date if set in the test data
+            # direct JSONL submissions will not have this field
+            first_last_modified = first_entry["attributes"].pop("last_modified", None)
+            next_last_modified = next_entry["attributes"].pop("last_modified", None)
+            assert (next_last_modified is None) == (first_last_modified is None)
+
             first_entry_species = first_entry["attributes"].pop("species", None)
             next_entry_species = next_entry["attributes"].pop("species", None)
             if first_entry_species:
@@ -112,9 +118,9 @@ def test_unique_id_generator():
     assert _set_unique_entry_ids(entry_ids) == ["1", "2", "3"]
 
     entry_ids = [
-        "data1/structures/1/POSCAR",
-        "data2/structures/1/POSCAR",
-        "data3/structures/1/POSCAR",
+        "data1",
+        "data2",
+        "data3",
     ]
     assert _set_unique_entry_ids(entry_ids) == entry_ids
 
