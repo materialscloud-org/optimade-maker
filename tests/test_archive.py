@@ -12,7 +12,7 @@ def test_archive_record_metadata():
 
     try:
         record = ArchiveRecord(test_record_id, archive_url=archive_url)
-        assert len(record.files) == 4
+        assert len(record.files_w_checksums) == 4
         assert record.is_optimade_record() is True
     except UnsupportedConfigVersion:
         traceback.print_exc()

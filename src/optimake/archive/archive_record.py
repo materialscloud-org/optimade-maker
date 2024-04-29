@@ -37,7 +37,7 @@ class ArchiveRecord:
 
         self.metadata = self.get_record_metadata()
         self.doi_id = self.get_doi_id()
-        self.files = self.get_files()
+        self.files_w_checksums = self.get_files_w_checksums()
 
         self.default_path = os.path.join("/tmp/archive", self.doi_id)
 
@@ -49,7 +49,7 @@ class ArchiveRecord:
         """
         optimade_yml_name = None
         for name_candidate in ["optimade.yaml", "optimade.yml"]:
-            if name_candidate in self.files:
+            if name_candidate in self.files_w_checksums:
                 optimade_yml_name = name_candidate
                 break
         return optimade_yml_name
@@ -61,16 +61,17 @@ class ArchiveRecord:
         self.download_files()
         # self.convert_to_optimade()
 
-    def download_optimade_files(self, path=None, extract_files=False):
+    def download_optimade_files(self, path=None):
         if not self.is_optimade_record():
             return
         self.load_optimade_config()
-        self.download_files(path, extract_files=extract_files)
+        self.download_files(path)
 
     def get_record_url(self, record_id: int) -> str:
         return self.archive_url + "api/records/" + str(record_id)
 
-    def get_file_url(self, record_id: int, filename: str, checksum: str) -> str:
+    def get_file_url(self, filename: str) -> str:
+        # checksum = self.files_w_checksums[filename]
         filename = filename.replace(" ", "+")
         # original version, failing for
         # https://staging-archive.materialscloud.org//record/file_stats?record_id=1412&checksum=md5:81b5fefab6bfa8e516d313b9cea39c66&filename=structures.zip
@@ -78,9 +79,7 @@ class ArchiveRecord:
         #     self.archive_url
         #     + f"/record/file_stats?record_id={record_id}&checksum={checksum}&filename={filename}"
         # )
-        url = (
-            self.archive_url + f"/record/file?record_id={record_id}&filename={filename}"
-        )
+        url = self.archive_url + f"/record/file?record_id={self.id}&filename={filename}"
         return url
 
     def get_record_metadata(self):
@@ -110,9 +109,9 @@ class ArchiveRecord:
         """
         return self.metadata["doi"].split(":")[-1]
 
-    def get_files(self):
+    def get_files_w_checksums(self):
         """
-        Get the file list of a record.
+        Get the file list with checksums of a record.
         """
         files = {f["key"]: f["checksum"] for f in self.metadata["_files"]}
         return files
@@ -128,7 +127,7 @@ class ArchiveRecord:
         Try to download the optimade.yaml/yml file.
         """
         filename = self.optimade_config_name
-        url = self.get_file_url(self.id, filename, self.files[filename])
+        url = self.get_file_url(filename)
         response = requests.get(url, allow_redirects=True)
         if not response.status_code == 200:
             raise RuntimeError(f"Could not download {filename} file.")
@@ -141,14 +140,14 @@ class ArchiveRecord:
         response = self.download_optimade_config_file()
         self.mc_config = Config.from_string(response.content.decode("utf-8"))
 
-    def download_files(self, path=None, extract_files: bool = False):
+    def download_files(self, path=None):
         """
         Download all files from the optimade file list.
         """
         import os
         import shutil
 
-        from .utils import download_file, extract
+        from .utils import download_file
 
         if not path:
             path = self.default_path
@@ -159,24 +158,26 @@ class ArchiveRecord:
         os.makedirs(path)
 
         # download optimade.yml/yaml and rename to "yml->yaml"
-        file_url = self.get_file_url(
-            self.id, self.optimade_config_name, self.files[self.optimade_config_name]
-        )
+        file_url = self.get_file_url(self.optimade_config_name)
         download_file(file_url, path, rename="optimade.yaml")
 
         # download files in record
-        for entry in self.mc_config.entries:
-            list_of_files = [path.file for path in entry.entry_paths]
-            if hasattr(entry, "property_paths"):
-                list_of_files += [path.file for path in entry.property_paths]
-            for fname in list_of_files:
-                file_url = self.get_file_url(self.id, fname, self.files[fname])
-                file_path = download_file(file_url, path)
-                if extract_files:
-                    try:
-                        print("\nExtracting file ", file_path)
-                        extract(file_path, path)
-                        print("Extracted!")
-                    except ValueError as e:
-                        print(e)
-                        print("Try to open the file and count the structures...")
+        if hasattr(self.mc_config.entries, "jsonl_path"):
+            # case 1: jsonl file specified (either via `file: jsonl.gz` or `jsonl_path:`)
+            if hasattr(self.mc_config.entries, "file"):
+                # download `file:`, if specified
+                file_url = self.get_file_url(self.mc_config.entries.file)
+                download_file(file_url, path)
+            else:
+                # otherwise download the `jsonl_path:`
+                file_url = self.get_file_url(self.mc_config.entries.jsonl_path)
+                download_file(file_url, path)
+        else:
+            # case 2: files specified as entry_paths/property_paths
+            for entry in self.mc_config.entries:
+                list_of_files = [path.file for path in entry.entry_paths]
+                if hasattr(entry, "property_paths"):
+                    list_of_files += [path.file for path in entry.property_paths]
+                for fname in list_of_files:
+                    file_url = self.get_file_url(fname)
+                    download_file(file_url, path)
