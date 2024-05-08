@@ -302,7 +302,7 @@ def _set_unique_entry_ids(entry_ids: list[str]) -> list[str]:
         max_depth: int = 10  # somewhat arbitrary upper limit
         # Loop through each filename and try to ablate directories to reach the smallest unique set
         while len(set(new_ids)) == target_num_ids and depth < max_depth:
-            trial_ids = ["/".join(id.split("/")[depth + 1:]) for id in new_ids]
+            trial_ids = ["/".join(id.split("/")[depth + 1 :]) for id in new_ids]
             if len(set(trial_ids)) == target_num_ids:
                 new_ids = trial_ids
             else:
