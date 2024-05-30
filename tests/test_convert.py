@@ -77,6 +77,12 @@ def test_convert_example_archives(archive_path, tmp_path):
                 first_entry.pop(field, None)
                 next_entry.pop(field, None)
 
+            # check that last_modified is a reasonable date if set in the test data
+            # direct JSONL submissions will not have this field
+            first_last_modified = first_entry["attributes"].pop("last_modified", None)
+            next_last_modified = next_entry["attributes"].pop("last_modified", None)
+            assert (next_last_modified is None) == (first_last_modified is None)
+
             first_entry_species = first_entry["attributes"].pop("species", None)
             next_entry_species = next_entry["attributes"].pop("species", None)
             if first_entry_species:
@@ -87,3 +93,67 @@ def test_convert_example_archives(archive_path, tmp_path):
             assert json.dumps(
                 first_entry["attributes"], sort_keys=True, indent=2
             ) == json.dumps(next_entry["attributes"], sort_keys=True, indent=2)
+
+
+def test_unique_id_generator():
+    """Unit tests for some common cases of the unique ID generator."""
+
+    from optimake.convert import _set_unique_entry_ids
+
+    entry_ids = [
+        "data/structures/1.cif",
+        "data/structures/2.cif",
+        "data/structures/3.cif",
+    ]
+    assert _set_unique_entry_ids(entry_ids) == ["1", "2", "3"]
+
+    entry_ids = ["data/structures/1", "data/structures/2", "data/structures/3"]
+    assert _set_unique_entry_ids(entry_ids) == ["1", "2", "3"]
+
+    entry_ids = [
+        "data/structures/1/POSCAR",
+        "data/structures/2/POSCAR",
+        "data/structures/3/POSCAR",
+    ]
+    assert _set_unique_entry_ids(entry_ids) == ["1", "2", "3"]
+
+    entry_ids = [
+        "data1",
+        "data2",
+        "data3",
+    ]
+    assert _set_unique_entry_ids(entry_ids) == entry_ids
+
+    entry_ids = [
+        "data.zip/data/structures/1.cif",
+        "data.zip/data/structures/2.cif",
+        "data.zip/data/structures/3.cif",
+    ]
+    assert _set_unique_entry_ids(entry_ids) == ["1", "2", "3"]
+
+    entry_ids = [
+        "data.tar.gz/data/structures/1.cif",
+        "data.tar.gz/data/structures/2.cif",
+        "data.tar.gz/data/structures/3.cif",
+    ]
+    assert _set_unique_entry_ids(entry_ids) == ["1", "2", "3"]
+
+    entry_ids = [
+        "data.tar.gz/data/structures/1.cif.gz",
+        "data.tar.gz/data/structures/2.cif.gz",
+        "data.tar.gz/data/structures/3.cif.gz",
+    ]
+    assert _set_unique_entry_ids(entry_ids) == ["1", "2", "3"]
+
+    entry_ids = [
+        "data.tar.gz/data/set1/1.cif/file",
+        "data.tar.gz/data/set1/2.cif/file",
+        "data.tar.gz/data/set2/3.xyz/file",
+        "data.tar.gz/data/set2/4.xyz/file",
+    ]
+    assert _set_unique_entry_ids(entry_ids) == [
+        "set1/1.cif",
+        "set1/2.cif",
+        "set2/3.xyz",
+        "set2/4.xyz",
+    ]

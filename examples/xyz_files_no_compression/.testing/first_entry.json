@@ -1,11 +1,11 @@
 {
-  "id": "H_1.xyz",
+  "id": "H_1",
   "type": "structures",
   "links": null,
   "meta": null,
   "attributes": {
-    "immutable_id": null,
-    "last_modified": null,
+    "immutable_id": "H_1.xyz",
+    "last_modified": "1970",
     "elements": [
       "H"
     ],

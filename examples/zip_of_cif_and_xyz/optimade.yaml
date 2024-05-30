@@ -1,0 +1,13 @@
+config_version: 0.1.0
+
+database_description: >-
+  Example database.
+
+entries:
+  - entry_type: structures
+    entry_paths:
+      - file: structures.zip
+        matches:
+          - structures/set1/*.cif
+          - structures/set2/*.cif
+          - structures/molecules/*.xyz
