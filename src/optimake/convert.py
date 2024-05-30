@@ -283,8 +283,8 @@ def _parse_entries(
 
 
 def _set_unique_entry_ids(entry_ids: list[str]) -> list[str]:
-    """Attempt to make the simplest unique set of entry IDs possible,
-    following a series of deterministic rules.
+    """Attempt to make a unique set of entry IDs, following a
+    series of deterministic rules.
 
     Parameters:
         entry_ids: A list of entry IDs derived from file paths.
@@ -295,41 +295,47 @@ def _set_unique_entry_ids(entry_ids: list[str]) -> list[str]:
     """
 
     new_ids: list[str] = list(entry_ids)
-    target_num_ids = len(entry_ids)
 
-    def _strip_common_dirs(new_ids):
-        depth: int = 0
-        max_depth: int = 10  # somewhat arbitrary upper limit
-        # Loop through each filename and try to ablate directories to reach the smallest unique set
-        while len(set(new_ids)) == target_num_ids and depth < max_depth:
-            trial_ids = ["/".join(id.split("/")[depth + 1 :]) for id in new_ids]
-            if len(set(trial_ids)) == target_num_ids:
-                new_ids = trial_ids
+    def _strip_common_path(ids, from_back=False):
+        if not from_back:
+            ids_split = [id.split("/") for id in ids]
+        else:
+            ids_split = [id.split("/")[::-1] for id in ids]
+
+        index = 0
+        while True:
+            try:
+                element = ids_split[0][index]
+                if all(id_split[index] == element for id_split in ids_split):
+                    index += 1
+                else:
+                    break
+            except IndexError:
+                break
+
+        if from_back:
+            res = ["/".join(id_split[index:][::-1]) for id_split in ids_split]
+        else:
+            res = ["/".join(id_split[index:]) for id_split in ids_split]
+
+        return res
+
+    new_ids = _strip_common_path(new_ids)
+    new_ids = _strip_common_path(new_ids, from_back=True)
+
+    def _strip_common_extensions(ids):
+        new_ids = list(ids)
+        while True:
+            ext = os.path.splitext(new_ids[0])[1]
+            if ext == "":
+                break
+            if all(os.path.splitext(id)[1] == ext for id in new_ids):
+                new_ids = [os.path.splitext(id)[0] for id in new_ids]
             else:
                 break
-            depth += 1
-
         return new_ids
 
-    new_ids = _strip_common_dirs(new_ids)
-
-    # Now try to ablate any common file names, e.g,. subfolders of POSCARs (1/POSCAR, 2/POSCAR)
-    # Loop through each filename and try to ablate directories until a unique set arises
-    new_ids_sans_common_filenames = [
-        "/".join(new_id.split("/")[0:-1]) for new_id in new_ids
-    ]
-    if len(set(new_ids_sans_common_filenames)) == target_num_ids:
-        new_ids = new_ids_sans_common_filenames
-
-    new_ids = _strip_common_dirs(new_ids)
-
-    # Now try to ablate any file extensions
-    new_ids_sans_extensions = [id.split(".")[0] for id in new_ids]
-    if len(set(new_ids_sans_extensions)) == target_num_ids:
-        return new_ids_sans_extensions
-
-    if len(set(new_ids)) != target_num_ids:
-        return entry_ids
+    new_ids = _strip_common_extensions(new_ids)
 
     return new_ids
 

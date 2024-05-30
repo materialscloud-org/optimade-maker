@@ -144,3 +144,16 @@ def test_unique_id_generator():
         "data.tar.gz/data/structures/3.cif.gz",
     ]
     assert _set_unique_entry_ids(entry_ids) == ["1", "2", "3"]
+
+    entry_ids = [
+        "data.tar.gz/data/set1/1.cif/file",
+        "data.tar.gz/data/set1/2.cif/file",
+        "data.tar.gz/data/set2/3.xyz/file",
+        "data.tar.gz/data/set2/4.xyz/file",
+    ]
+    assert _set_unique_entry_ids(entry_ids) == [
+        "set1/1.cif",
+        "set1/2.cif",
+        "set2/3.xyz",
+        "set2/4.xyz",
+    ]
