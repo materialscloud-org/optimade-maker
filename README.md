@@ -72,5 +72,6 @@ Authors (alphabetical):
 - Kristjan Eimre
 - Matthew Evans
 - Giovanni Pizzi
+- Gian-Marco Rignanese
 - Jusong Yu
 - Xing Wang
