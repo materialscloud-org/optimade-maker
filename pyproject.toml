@@ -4,10 +4,10 @@ version = "0.1.2"
 requires-python = ">=3.10"
 
 dependencies = [
-    "pydantic<2.0",
-    "optimade[ase]~=0.25",
+    "pydantic~=2.2",
+    "optimade[ase]~=1.0",
     "pyyaml~=6.0",
-    "pymatgen~=2023.9",
+    "pymatgen>=2023.9",
     "pandas~=2.1",
     "pybtex~=0.24",
     "tqdm~=4.65",

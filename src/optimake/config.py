@@ -1,8 +1,9 @@
-"""This submodule describes the `optimade.yaml` config file
-that can be provided in an MCloud entry and used to indicate
-how an OPIMADE API should be constructed from the entry.
+"""This submodule describes the `optimade.yaml` config file that is used
+to indicate how an OPTIMADE API should be constructed from the entry.
 
 """
+
+from pydantic import ConfigDict, field_validator, model_validator
 
 __version__ = "0.1.0"
 
@@ -10,7 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 import yaml
-from pydantic import BaseModel, Field, root_validator, validator
+from pydantic import BaseModel, Field
 
 
 class UnsupportedConfigVersion(RuntimeError):
@@ -29,25 +30,28 @@ the auxiliary property files.
 Will be served with a provider-specific prefix in the actual API, so must not start with an underscore."""
     )
 
-    title: Optional[str] = Field(description="A human-readable title for the property.")
+    title: Optional[str] = Field(
+        None, description="A human-readable title for the property."
+    )
     description: Optional[str] = Field(
-        description="A human-readable description of the property."
+        None, description="A human-readable description of the property."
     )
     unit: Optional[str] = Field(
-        description="The unit of the property, e.g. 'eV' or 'Å'."
+        None, description="The unit of the property, e.g. 'eV' or 'Å'."
     )
     type: Optional[str] = Field(
-        description="The OPTIMADE type of the property, e.g., `float` or `string`."
+        None,
+        description="The OPTIMADE type of the property, e.g., `float` or `string`.",
     )
     maps_to: Optional[str] = Field(
-        description="A URI/URN for a canonical definition of the property, within the OPTIMADE extended format. Where possible, this should be a versioned URI."
+        None,
+        description="A URI/URN for a canonical definition of the property, within the OPTIMADE extended format. Where possible, this should be a versioned URI.",
     )
     aliases: Optional[list[str]] = Field(
-        description="A list of aliases to also search for for this property; `name` will be used for the field in the actual OPTIMADE API."
+        None,
+        description="A list of aliases to also search for for this property; `name` will be used for the field in the actual OPTIMADE API.",
     )
-
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="forbid")
 
 
 class ParsedFiles(BaseModel):
@@ -56,12 +60,11 @@ class ParsedFiles(BaseModel):
     )
 
     matches: Optional[list[str]] = Field(
+        None,
         description="A list of matches to be used to filter the file contents. Each match can use simple '*' wildcard syntax.",
         examples=[["structures/*.cif", "relaxed-structures/1.cif"]],
     )
-
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="forbid")
 
 
 class EntryConfig(BaseModel):
@@ -69,7 +72,7 @@ class EntryConfig(BaseModel):
         description="The OPTIMADE entry type, e.g. `structures` or `references`."
     )
     entry_paths: list[ParsedFiles] = Field(
-        description="A list of paths patterns to parse, provided relative to the top-level of the MCloud archive entry, after any compressed locations have been decompressed. Supports Python glob syntax for wildcards."
+        description="A list of paths patterns to parse, provided relative to the top-level of the archive entry, after any compressed locations have been decompressed. Supports Python glob syntax for wildcards."
     )
 
     property_paths: list[ParsedFiles] = Field(
@@ -82,7 +85,8 @@ class EntryConfig(BaseModel):
         description="A place to list property metadata for fields included in the auxiliary property files. Fields not present in this list not be served by the API.",
     )
 
-    @validator("entry_type")
+    @field_validator("entry_type")
+    @classmethod
     def check_optimade_entry_type(cls, v):
         if not isinstance(v, JSONLConfig):
             if v not in ("structures", "references") and not v.startswith("_"):
@@ -92,8 +96,7 @@ class EntryConfig(BaseModel):
 
         return v
 
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="forbid")
 
 
 class JSONLConfig(BaseModel):
@@ -103,21 +106,18 @@ class JSONLConfig(BaseModel):
     """
 
     file: Optional[str] = Field(
-        description="The archive filename containing the JSONL data to be parsed."
+        None, description="The archive filename containing the JSONL data to be parsed."
     )
 
     jsonl_path: str = Field(
         description="The path of the JSON-L file within the archive (or directly in the entry, if `archive_file` is `None`)."
     )
-
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="forbid")
 
 
 class Config(BaseModel):
     """This class describes the `optimade.yaml` file
-    that a user can provide for each MCloud entry.
-
+    that describes the raw data format.
     """
 
     config_version: str = Field(
@@ -130,10 +130,11 @@ class Config(BaseModel):
     )
 
     entries: list[EntryConfig] | JSONLConfig = Field(
-        description="A list of entry configurations for each entry type."
+        description="A list of entry configurations for each entry type or a JSONL file."
     )
 
-    @validator("entries")
+    @field_validator("entries")
+    @classmethod
     def check_one_entry_per_type(cls, v):
         if not isinstance(v, JSONLConfig):
             if len({e.entry_type for e in v}) != len(v):
@@ -151,11 +152,11 @@ class Config(BaseModel):
     def from_string(data: str):
         return Config(**yaml.safe_load(data))
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def validate_config_version(cls, values):
         if values.get("config_version") is None:
             raise UnsupportedConfigVersion(f"Config version must be {__version__}.")
         return values
 
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="forbid")

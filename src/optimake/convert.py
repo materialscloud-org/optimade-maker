@@ -36,7 +36,7 @@ def _construct_entry_type_info(
     default_properties = {}
     if type in ENTRY_INFO_SCHEMAS:
         default_properties = retrieve_queryable_properties(
-            ENTRY_INFO_SCHEMAS[type](), {"id", "type", "attributes"}
+            ENTRY_INFO_SCHEMAS[type], {"id", "type", "attributes"}
         )
 
     info: dict[str, Any] = {"formats": ["json"], "description": type}
@@ -558,7 +558,7 @@ def write_optimade_jsonl(
             entry_info = _construct_entry_type_info(
                 entry_type, property_definitions[entry_type], provider_prefix
             )
-            jsonl.write(entry_info.json())
+            jsonl.write(entry_info.model_dump_json())
             jsonl.write("\n")
 
         for entry_type in optimade_entries:
