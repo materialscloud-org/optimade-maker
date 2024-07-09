@@ -5,7 +5,7 @@ requires-python = ">=3.10"
 
 dependencies = [
     "pydantic~=2.2",
-    "optimade[ase]~=1.0",
+    "optimade[server,ase] @ git+https://github.com/Materials-Consortia/optimade-python-tools@ml-evs/general-ingestion",
     "pyyaml~=6.0",
     "pymatgen>=2023.9",
     "pandas~=2.1",
