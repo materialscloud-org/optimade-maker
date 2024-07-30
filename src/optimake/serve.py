@@ -132,7 +132,4 @@ class OptimakeServer:
 
     def start_api(self):
         set_config_env_variables(self.get_optimade_config())
-
-        uvicorn.run(
-            "optimade.server.main:app", host="0.0.0.0", port=self.port, reload=True
-        )
+        uvicorn.run("optimade.server.main:app", host="0.0.0.0", port=self.port)
