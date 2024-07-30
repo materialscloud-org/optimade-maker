@@ -1,2 +1,0 @@
-uvicorn[standard]
-gunicorn>=20.0.4
