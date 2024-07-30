@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 from optimade.models import EntryInfoResource
-from optimake.convert import convert_archive
+from optimade_maker.convert import convert_archive
 
 EXAMPLE_ARCHIVES = (Path(__file__).parent.parent / "examples").glob("*")
 
@@ -98,7 +98,7 @@ def test_convert_example_archives(archive_path, tmp_path):
 def test_unique_id_generator():
     """Unit tests for some common cases of the unique ID generator."""
 
-    from optimake.convert import _set_unique_entry_ids
+    from optimade_maker.convert import _set_unique_entry_ids
 
     entry_ids = [
         "data/structures/1.cif",

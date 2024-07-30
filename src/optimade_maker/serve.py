@@ -6,14 +6,14 @@ from pathlib import Path
 import bson.json_util
 import uvicorn
 
-from optimake.logger import LOGGER
+from optimade_maker.logger import LOGGER
 
 
 def get_optimake_provider_info(index_base_url=None):
     info = {
         "prefix": "optimake",
         "name": "Optimake",
-        "description": "Provider created with optimake",
+        "description": "Provider created with optimade-maker",
         "homepage": "https://github.com/materialscloud-org/optimade-maker",
         "index_base_url": index_base_url,
     }

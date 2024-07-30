@@ -1,7 +1,7 @@
 import tqdm
 
-from optimake.archive.archive_record import ArchiveRecord
-from optimake.archive.utils import get_all_records, get_parsed_records
+from optimade_maker.archive.archive_record import ArchiveRecord
+from optimade_maker.archive.utils import get_all_records, get_parsed_records
 
 DEFAULT_ARCHIVE_URL = "https://archive.materialscloud.org/"
 

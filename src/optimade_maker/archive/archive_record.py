@@ -4,7 +4,7 @@ from urllib.error import HTTPError, URLError
 
 import requests
 
-from optimake.config import Config
+from optimade_maker.config import Config
 
 DEFAULT_ARCHIVE_URL = "https://archive.materialscloud.org"
 

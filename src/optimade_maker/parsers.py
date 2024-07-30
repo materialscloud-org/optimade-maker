@@ -10,7 +10,7 @@ from optimade.adapters import Structure
 from optimade.models import EntryResource
 from pymatgen.entries.computed_entries import ComputedStructureEntry
 
-from optimake.config import PropertyDefinition
+from optimade_maker.config import PropertyDefinition
 
 
 def pybtex_to_optimade(bib_entry: Any, properties=None) -> EntryResource:

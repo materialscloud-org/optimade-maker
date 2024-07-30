@@ -2,9 +2,9 @@ from pathlib import Path
 
 import click
 
-from optimake.convert import convert_archive
-from optimake.logger import LOGGER
-from optimake.serve import OptimakeServer
+from optimade_maker.convert import convert_archive
+from optimade_maker.logger import LOGGER
+from optimade_maker.serve import OptimakeServer
 
 
 @click.group()

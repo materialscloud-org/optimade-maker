@@ -1,5 +1,5 @@
 [project]
-name = "optimake"
+name = "optimade-maker"
 description = "Tools for making OPTIMADE APIs from raw structural data."
 readme = "README.md"
 version = "0.2.2"
@@ -51,8 +51,8 @@ ignore_missing_imports = true
 follow_imports = "skip"
 
 [tool.isort]
-known_first_party = "optimake"
+known_first_party = "optimade_maker"
 profile = "black"
 
 [project.scripts]
-optimake = "optimake.cli:cli"
+optimake = "optimade_maker.cli:cli"
