@@ -5,14 +5,15 @@ requires-python = ">=3.10"
 
 dependencies = [
     "pydantic~=2.2",
-    "optimade[ase]~=1.0",
+    "optimade[server,ase]~=1.1",
     "pyyaml~=6.0",
     "pymatgen>=2023.9",
     "pandas~=2.1",
     "pybtex~=0.24",
     "tqdm~=4.65",
     "requests~=2.31",
-    "numpy~=1.26"
+    "numpy~=1.26",
+    "click~=8.1"
 ]
 
 [project.optional-dependencies]
@@ -39,4 +40,4 @@ known_first_party = "optimake"
 profile = "black"
 
 [project.scripts]
-optimake = "optimake.cli:main"
+optimake = "optimake.cli:cli"

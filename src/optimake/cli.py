@@ -1,21 +1,83 @@
-import argparse
 from pathlib import Path
 
+import click
+
 from optimake.convert import convert_archive
+from optimake.logger import LOGGER
+from optimake.serve import OptimakeServer
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        prog="optimake",
-        description="Use an `optimade.yaml` config to describe archived data and create a OPTIMADE JSONL file for ingestion as an OPTIMADE API.",
-    )
-    parser.add_argument("archive_path", help="The path to the archive to ingest.")
-    parser.add_argument("--jsonl-path", help="The path to write the JSONL file to.")
-    args = parser.parse_args()
-    jsonl_path = args.jsonl_path
+@click.group()
+def cli():
+    """
+    Tools for making OPTIMADE APIs for a raw data archives annotated with an
+    `optimade.yaml` file.
+    """
+    pass
+
+
+@cli.command()
+@click.option(
+    "--jsonl_path",
+    type=click.Path(),
+    help="The path to write the JSONL file to.",
+)
+@click.argument(
+    "path",
+    type=click.Path(),
+)
+def convert(jsonl_path, path):
+    """
+    Convert a raw data archive into OPTIMADE JSONL.
+
+    PATH needs to contain the full raw data archive, with the `optimade.yaml` config
+    file at the top level. The data is converted into the OPTIMADE JSON Lines format.
+    """
+
     if jsonl_path:
         jsonl_path = Path(jsonl_path)
         if jsonl_path.exists():
             raise FileExistsError(f"File already exists at {jsonl_path}.")
 
-    convert_archive(Path(args.archive_path), jsonl_path=jsonl_path)
+    convert_archive(Path(path), jsonl_path=jsonl_path)
+
+
+@cli.command()
+@click.option(
+    "--port",
+    type=int,
+    default=5000,
+    help="The port to serve the API on.",
+)
+@click.argument(
+    "path",
+    type=click.Path(),
+)
+def serve(port, path):
+    """
+    Serve a raw data archive with an OPTIMADE API.
+
+    PATH needs to contain the full raw data archive, with the `optimade.yaml` config
+    file at the top level. If needed, the data is first converted into an OPTIMADE JSONL
+    file. However, if the JSONL file already exists, the API is started from it.
+
+    Note that this command starts the API using a simple backend, which is not recommended
+    for a production environment.
+    """
+
+    jsonl_file = "optimade.jsonl"
+    path = Path(path)
+
+    if not (path / jsonl_file).exists():
+        LOGGER.info(f"{jsonl_file} doesn't exist. Converting archive.")
+        convert_archive(path)
+    else:
+        LOGGER.info(f"{jsonl_file} already exists!")
+
+    LOGGER.info("Starting the API")
+    optimake_server = OptimakeServer(path, port)
+    optimake_server.start_api()
+
+
+if __name__ == "__main__":
+    cli()
