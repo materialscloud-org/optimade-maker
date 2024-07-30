@@ -8,13 +8,13 @@
 
 Tools for making [OPTIMADE APIs](https://optimade.org) from various formats of structural data (e.g. an archive of CIF files).
 
-This repository contains the following Python packages that work towards this aim:
+This repository contains the `src/optimake` Python packages that work towards this aim. Features include
 
-- `src/optimake`: defines a config file format for annotating archives and registered the desired OPTIMADE entries, and a workflow for ingesting them and converting into OPTIMADE types using pre-existing parsers (e.g., ASE for structures). The archive is converted into an intermediate JSONLines file format that can be ingested into a database and used to serve a full OPTIMADE API.
-- `src/optimade_launch`: provides a platform for launching an OPTIMADE API server
-  from such a JSON lines file. It does so using the
-  [`optimade-python-tools`](https://github.com/Materials-Consortia/optimade-python-tools/)
-  reference server implementation.
+- definition of a config file format (`optimade.yaml`) for annotating data archives to be used in the OPTIMADE ecosystem;
+- conversion of the raw data into corresponding OPTIMADE types using pre-existing parsers (e.g., ASE for structures);
+- conversion of the annotated data archive into an intermediate JSONLines file format that can be ingested into a database and used to serve a full OPTIMADE API.
+- serving either an annotated data archive or a JSONLines file as an OPTIMADE API (using the [`optimade-python-tools`](https://github.com/Materials-Consortia/optimade-python-tools/)
+  reference server implementation).
 
 ## Usage
 
