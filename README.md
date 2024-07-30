@@ -6,6 +6,8 @@
 
 # <div align="center">optimade-maker</div>
 
+[![PyPI - Version](https://img.shields.io/pypi/v/optimake?color=4CC61E)](https://pypi.org/project/optimake/)
+
 Tools for making [OPTIMADE APIs](https://optimade.org) from various formats of structural data (e.g. an archive of CIF files).
 
 This repository contains the `src/optimake` Python packages that work towards this aim. Features include
