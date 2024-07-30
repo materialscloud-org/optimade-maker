@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     branches:
-    - main
+      - main
 
 env:
   PYTEST_ADDOPTS: "--color=yes"
@@ -16,38 +16,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-
   tests:
-    name: Test the `optimake` package
+    name: Test the `optimade-maker` package
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-        cache: 'pip'
-        cache-dependency-path: |
-          pyproject.toml
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+          cache: "pip"
+          cache-dependency-path: |
+            pyproject.toml
 
-    - name: Install latest compatible versions of immediate dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -U setuptools wheel
-        pip install -e .[tests,dev]
+      - name: Install latest compatible versions of immediate dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -U setuptools wheel
+          pip install -e .[tests,dev]
 
-    - name: Run linters
-      run: |
-        pre-commit run --all-files
+      - name: Run linters
+        run: |
+          pre-commit run --all-files
 
-    - name: Run tests
-      run: pytest -vv --cov-report=xml --cov-report=term ./tests
+      - name: Run tests
+        run: pytest -vv --cov-report=xml --cov-report=term ./tests
 
-    - name: Upload coverage
-      uses: codecov/codecov-action@v3
-      with:
-        name: project
-        file: ./coverage.xml
-        flags: project
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          name: project
+          file: ./coverage.xml
+          flags: project

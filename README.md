@@ -6,11 +6,11 @@
 
 # <div align="center">optimade-maker</div>
 
-[![PyPI - Version](https://img.shields.io/pypi/v/optimake?color=4CC61E)](https://pypi.org/project/optimake/)
+[![PyPI - Version](https://img.shields.io/pypi/v/optimade-maker?color=4CC61E)](https://pypi.org/project/optimade-maker/)
 
 Tools for making [OPTIMADE APIs](https://optimade.org) from various formats of structural data (e.g. an archive of CIF files).
 
-This repository contains the `src/optimake` Python packages that work towards this aim. Features include
+This repository contains the `src/optimade-maker` Python package and the corresponding CLI tool `optimake` that work towards this aim. Features include
 
 - definition of a config file format (`optimade.yaml`) for annotating data archives to be used in the OPTIMADE ecosystem;
 - conversion of the raw data into corresponding OPTIMADE types using pre-existing parsers (e.g., ASE for structures);
@@ -24,7 +24,7 @@ See `./examples` for a more complete set of supported formats and corresponding 
 
 ### Annotating with `optimade.yaml`
 
-To annotate your structural data for `optimake`, the data archive needs to be accompanied by an `optimade.yaml` config file. The following is a simple example for a zip archive (`structures.zip`) of cif files together with an optional property file (`data.csv`):
+To annotate your structural data for `optimade-maker`, the data archive needs to be accompanied by an `optimade.yaml` config file. The following is a simple example for a zip archive (`structures.zip`) of cif files together with an optional property file (`data.csv`):
 
 ```yaml
 config_version: 0.1.0
@@ -49,7 +49,7 @@ entries:
 
 ### Structure `id`s and property files
 
-`optimake` will assign an `id` for each structure based on its full path in the archive, following a simple deterministic rule: from the set of all archive paths, the maximum common path prefix and postfix (including file extensions) are removed. E.g.
+`optimade-maker` will assign an `id` for each structure based on its full path in the archive, following a simple deterministic rule: from the set of all archive paths, the maximum common path prefix and postfix (including file extensions) are removed. E.g.
 
 ```
 structures.zip/cifs/set1/101.cif
@@ -71,7 +71,7 @@ structures.zip/cifs/set2/102.cif,3.2
 Install with
 
 ```bash
-pip install .
+pip install optimade-maker
 ```
 
 this will also make the `optimake` CLI utility available.
@@ -83,9 +83,9 @@ For a folder containing the data archive and the `optimade.yaml` file (such as i
 
 For more detailed information see also `optimake --help`.
 
-## `optimake` JSONLines Format
+## `optimade-maker` JSONLines Format
 
-As described above, `optimake` works via an intermediate JSONLines file representation of an OPTIMADE API (see also the [corresponding issue in the specification](https://github.com/Materials-Consortia/OPTIMADE/issues/471)).
+As described above, `optimade-maker` works via an intermediate JSONLines file representation of an OPTIMADE API (see also the [corresponding issue in the specification](https://github.com/Materials-Consortia/OPTIMADE/issues/471)).
 This file should provide enough metadata to spin up an OPTIMADE API with many different entry types.
 The format is as follows:
 
