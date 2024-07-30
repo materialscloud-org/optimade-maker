@@ -6,10 +6,9 @@
 
 # <div align="center">optimade-maker</div>
 
-Code for making [OPTIMADE APIs](https://optimade.org) from various formats of structural data (e.g. an archive of CIF files).
+Tools for making [OPTIMADE APIs](https://optimade.org) from various formats of structural data (e.g. an archive of CIF files).
 
-This repository contains the following Python packages that work towards this
-aim:
+This repository contains the following Python packages that work towards this aim:
 
 - `src/optimake`: defines a config file format for annotating archives and registered the desired OPTIMADE entries, and a workflow for ingesting them and converting into OPTIMADE types using pre-existing parsers (e.g., ASE for structures). The archive is converted into an intermediate JSONLines file format that can be ingested into a database and used to serve a full OPTIMADE API.
 - `src/optimade_launch`: provides a platform for launching an OPTIMADE API server
@@ -19,22 +18,70 @@ aim:
 
 ## Usage
 
-To generate an optimake JSONLines file, the structural data needs to be accompanied by an `optimade.yaml` config file. A minimal example for a zip archive (`structures.zip`) of cif files is the following:
+See `./examples` for a more complete set of supported formats and corresponding `optimade.yaml` config files.
 
-```
+### Annotating with `optimade.yaml`
+
+To annotate your structural data for `optimake`, the data archive needs to be accompanied by an `optimade.yaml` config file. The following is a simple example for a zip archive (`structures.zip`) of cif files together with an optional property file (`data.csv`):
+
+```yaml
+config_version: 0.1.0
+database_description: Simple database
+
 entries:
   - entry_type: structures
     entry_paths:
       - file: structures.zip
         matches:
-          - structures/cifs/*.cif
+          - cifs/*/*.cif
+    # (optional) property file and definitions:
+    property_paths:
+      - file: data.csv
+    property_definitions:
+      - name: energy
+        title: Total energy per atom
+        description: The total energy per atom as computed by DFT
+        unit: eV/atom
+        type: float
 ```
 
-Run `optimake .` in the folder containing `structures.zip` and `optimade.yaml` to generate the jsonl file.
+### Structure `id`s and property files
 
-See `./examples` for other supported formats and corresponding `optimade.yaml` config files.
+`optimake` will assign an `id` for each structure based on its full path in the archive, following a simple deterministic rule: from the set of all archive paths, the maximum common path prefix and postfix (including file extensions) are removed. E.g.
 
-## optimake JSONLines Format
+```
+structures.zip/cifs/set1/101.cif
+structures.zip/cifs/set2/102.cif
+```
+
+produces `["set1/101", "set2/102"]`.
+
+The property files need to either refer to these `id`s or the full path in the archive to be associated with a structure. E.g. a possible property `csv` file could be
+
+```csv
+id,energy
+set1/101,2.5
+structures.zip/cifs/set2/102.cif,3.2
+```
+
+### Installing and running `optimake`
+
+Install with
+
+```bash
+pip install .
+```
+
+this will also make the `optimake` CLI utility available.
+
+For a folder containing the data archive and the `optimade.yaml` file (such as in `/examples`), run
+
+- `optimake convert .` to just convert the entry into the JSONL format (see below).
+- `optimake serve .` to start the OPTIMADE API (this also first converts the entry, if needed);
+
+For more detailed information see also `optimake --help`.
+
+## `optimake` JSONLines Format
 
 As described above, `optimake` works via an intermediate JSONLines file representation of an OPTIMADE API (see also the [corresponding issue in the specification](https://github.com/Materials-Consortia/OPTIMADE/issues/471)).
 This file should provide enough metadata to spin up an OPTIMADE API with many different entry types.
