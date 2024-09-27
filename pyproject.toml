@@ -27,7 +27,7 @@ dependencies = [
     "pybtex~=0.24",
     "tqdm~=4.65",
     "requests~=2.31",
-    "numpy >= 1.26, < 3",
+    "numpy >= 1.22, < 3",
     "click~=8.1"
 ]
 
