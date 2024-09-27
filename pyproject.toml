@@ -33,7 +33,7 @@ dependencies = [
 
 [project.optional-dependencies]
 tests = ["pytest~=7.4", "pytest-cov~=4.0"]
-dev = ["black", "ruff", "pre-commit", "mypy", "isort", "types-all"]
+dev = ["black", "ruff", "pre-commit", "mypy", "isort"]
 
 [tool.ruff]
 select = ["E", "F", "I", "W", "Q"]
