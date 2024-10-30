@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+
 from optimade_maker.config import Config
 
 EXAMPLE_YAMLS = (Path(__file__).parent.parent / "examples").glob("*/optimade.yaml")

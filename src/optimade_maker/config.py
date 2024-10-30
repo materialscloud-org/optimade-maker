@@ -14,8 +14,7 @@ import yaml
 from pydantic import BaseModel, Field
 
 
-class UnsupportedConfigVersion(RuntimeError):
-    ...
+class UnsupportedConfigVersion(RuntimeError): ...
 
 
 class PropertyDefinition(BaseModel):

@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 from optimade.models import EntryInfoResource
+
 from optimade_maker.convert import convert_archive
 
 EXAMPLE_ARCHIVES = (Path(__file__).parent.parent / "examples").glob("*")
