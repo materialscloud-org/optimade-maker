@@ -36,4 +36,4 @@ repos:
     hooks:
     - id: mypy
       name: "MyPy"
-      additional_dependencies: ["pydantic~=2.2"]
+      additional_dependencies: ["pydantic~=2.2", "types-PyYAML", "types-requests"]
