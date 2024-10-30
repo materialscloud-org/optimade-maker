@@ -1,5 +1,8 @@
 import json
 import os
+import signal
+import sys
+import threading
 import traceback
 from pathlib import Path
 
@@ -101,9 +104,22 @@ class OptimakeServer:
     Uses the MongoMock backend.
     """
 
-    def __init__(self, path: Path, port: int = 5000):
+    def __init__(self, path: Path, port: int = 5000, **config_kws):
+        """Initialise the OptimakeServer instance.
+
+        Parameters:
+            path: Path to the directory containing the optimade.jsonl file.
+            port: Port to run the API on.
+            config_kws: Additional optimade-python-tools configuration options to pass to the API.
+
+        """
         self.path = path
         self.port = port
+        self.config_kws = config_kws
+        self.server = None
+
+        signal.signal(signal.SIGINT, self.handle_shutdown)
+        signal.signal(signal.SIGTERM, self.handle_shutdown)
 
         self.base_url = f"http://localhost:{self.port}"
         # self.index_base_url = "http://localhost:5001"
@@ -126,10 +142,26 @@ class OptimakeServer:
             "log_dir": str(self.path.resolve()),
         }
 
+        config_dict.update(self.config_kws)
+
         LOGGER.debug(f"CONFIG: {config_dict}")
 
         return config_dict
 
     def start_api(self):
         set_config_env_variables(self.get_optimade_config())
-        uvicorn.run("optimade.server.main:app", host="0.0.0.0", port=self.port)
+        from optimade.server.main import app
+
+        config = uvicorn.Config(app, host="0.0.0.0", port=self.port)
+        self.server = uvicorn.Server(config)
+        self.thread = threading.Thread(target=self.server.run)
+        self.thread.start()
+
+    def stop_server(self):
+        if self.server:
+            self.server.should_exit = True
+            self.thread.join()
+
+    def handle_shutdown(self, signum, frame):
+        self.stop_server()
+        sys.exit(0)
