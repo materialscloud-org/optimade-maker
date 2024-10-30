@@ -101,9 +101,18 @@ class OptimakeServer:
     Uses the MongoMock backend.
     """
 
-    def __init__(self, path: Path, port: int = 5000):
+    def __init__(self, path: Path, port: int = 5000, **config_kws):
+        """Initialise the OptimakeServer instance.
+
+        Parameters:
+            path: Path to the directory containing the optimade.jsonl file.
+            port: Port to run the API on.
+            config_kws: Additional optimade-python-tools configuration options to pass to the API.
+
+        """
         self.path = path
         self.port = port
+        self.config_kws = config_kws
 
         self.base_url = f"http://localhost:{self.port}"
         # self.index_base_url = "http://localhost:5001"
@@ -125,6 +134,8 @@ class OptimakeServer:
             "provider_fields": provider_fields,
             "log_dir": str(self.path.resolve()),
         }
+
+        config_dict.update(self.config_kws)
 
         LOGGER.debug(f"CONFIG: {config_dict}")
 
