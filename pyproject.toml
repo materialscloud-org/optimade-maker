@@ -24,7 +24,6 @@ dependencies = [
     "pyyaml~=6.0",
     "pymatgen>=2023.9",
     "pandas >= 1.5, < 3",
-    "pybtex~=0.24",
     "tqdm~=4.65",
     "requests~=2.31",
     "numpy >= 1.22, < 3",
