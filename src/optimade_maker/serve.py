@@ -1,6 +1,7 @@
 import json
 import os
 import traceback
+import warnings
 from pathlib import Path
 
 import bson.json_util
@@ -74,8 +75,12 @@ def get_provider_fields_from_jsonl(jsonl_path: Path):
 
     with open(jsonl_path, "r") as fhandle:
         try:
-            for json_str in fhandle:
-                entry = bson.json_util.loads(json_str)
+            for line_no, json_str in enumerate(fhandle):
+                try:
+                    entry = bson.json_util.loads(json_str)
+                except json.JSONDecodeError:
+                    warnings.warn(f"Found bad JSONL line at L{line_no}")
+                    continue
 
                 if "properties" in entry:
                     if "type" not in entry:
@@ -88,6 +93,13 @@ def get_provider_fields_from_jsonl(jsonl_path: Path):
                         # 1.2+ info endpoints include type & id
                         if entry["type"] == "info":
                             _read_custom_fields(entry["properties"], entry["id"])
+
+                elif "x-optimade" in entry:
+                    continue
+                # If this isn't an info endpoint, or the first line header, then we break
+                # as presumably we have reached the data itself
+                else:
+                    break
 
         except Exception as exc:
             traceback.print_exc()
