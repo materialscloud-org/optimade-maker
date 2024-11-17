@@ -31,7 +31,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-tests = ["pytest~=7.4", "pytest-cov~=4.0"]
+tests = ["pytest~=8.3", "pytest-cov~=6.0"]
 dev = ["black", "ruff", "pre-commit", "mypy", "isort"]
 
 [tool.ruff]
