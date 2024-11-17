@@ -140,6 +140,7 @@ class OptimakeServer:
             "debug": False,
             "insert_test_data": False,
             "insert_from_jsonl": str(jsonl_path.resolve()),
+            "create_default_index": True,
             "base_url": self.base_url,
             "provider": get_optimake_provider_info(),
             # "index_base_url": self.index_base_url,
