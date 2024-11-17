@@ -150,6 +150,16 @@ class OptimakeServer:
 
         config_dict.update(self.config_kws)
 
+        # Loop through any environment variables that start with "OPTIMAKE_" and set them
+        for env in os.environ:
+            if env.startswith("OPTIMAKE_"):
+                LOGGER.debug(
+                    "Reading environment variable %s into config with value %s",
+                    env,
+                    os.environ[env],
+                )
+                config_dict[env.replace("OPTIMAKE_", "").lower()] = os.environ[env]
+
         LOGGER.debug(f"CONFIG: {config_dict}")
 
         return config_dict
