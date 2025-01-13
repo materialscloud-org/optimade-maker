@@ -16,7 +16,6 @@ from optimade.models import EntryInfoResource, EntryResource
 from optimade.server.schemas import ENTRY_INFO_SCHEMAS, retrieve_queryable_properties
 
 from .config import Config, EntryConfig, JSONLConfig, ParsedFiles, PropertyDefinition
-from .parsers import ENTRY_PARSERS, OPTIMADE_CONVERTERS, PROPERTY_PARSERS, TYPE_MAP
 
 PROVIDER_PREFIX = os.environ.get("OPTIMAKE_PROVIDER_PREFIX", "optimake")
 
@@ -55,7 +54,9 @@ def _construct_entry_type_info(
     return EntryInfoResource(**info)
 
 
-def convert_archive(archive_path: Path, jsonl_path: Path | None = None, limit: int | None = None) -> Path:
+def convert_archive(
+    archive_path: Path, jsonl_path: Path | None = None, limit: int | None = None
+) -> Path:
     """Convert an MCloud entry to an OPTIMADE JSONL file.
 
     Parameters:
@@ -107,7 +108,9 @@ def convert_archive(archive_path: Path, jsonl_path: Path | None = None, limit: i
 
     for entry in mc_config.entries:
         optimade_entries[entry.entry_type].extend(
-            construct_entries(archive_path, entry, PROVIDER_PREFIX, limit=limit).values()
+            construct_entries(
+                archive_path, entry, PROVIDER_PREFIX, limit=limit
+            ).values()
         )
 
     property_definitions = defaultdict(list)
@@ -243,13 +246,17 @@ def _parse_entries(
         A list of parsed entries and a list of IDs.
 
     """
+    from .parsers import ENTRY_PARSERS
+
     parsed_entries = []
     entry_ids: list[str] = []
     for archive_file in matches_by_file:
-        for ind, _path in enumerate(tqdm.tqdm(
-            matches_by_file[archive_file],
-            desc=f"Parsing {entry_type} files",
-        )):
+        for ind, _path in enumerate(
+            tqdm.tqdm(
+                matches_by_file[archive_file],
+                desc=f"Parsing {entry_type} files",
+            )
+        ):
             if limit and ind >= limit:
                 break
 
@@ -362,6 +369,8 @@ def _parse_and_assign_properties(
     dictionary of OPTIMADE entries.
 
     """
+    from .parsers import PROPERTY_PARSERS, TYPE_MAP
+
     parsed_properties: dict[str, dict[str, Any]] = defaultdict(dict)
     errors = []
     all_property_fields: set[str] = set()
@@ -432,7 +441,10 @@ def _parse_and_assign_properties(
 
 
 def construct_entries(
-    archive_path: Path, entry_config: EntryConfig, provider_prefix: str, limit: int | None = None,
+    archive_path: Path,
+    entry_config: EntryConfig,
+    provider_prefix: str,
+    limit: int | None = None,
 ) -> dict[str, dict]:
     """Given an archive path and an entry specification,
     loop through the provided paths and try to ingest them
@@ -446,6 +458,8 @@ def construct_entries(
             the given entry type.
 
     """
+
+    from .parsers import ENTRY_PARSERS, OPTIMADE_CONVERTERS
 
     if entry_config.entry_type not in ENTRY_PARSERS:
         raise RuntimeError(f"Parsing type {entry_config.entry_type} is not supported.")
