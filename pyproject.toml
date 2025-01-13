@@ -20,10 +20,8 @@ classifiers = [
 
 dependencies = [
     "pydantic~=2.2",
-    "optimade[server,ase]~=1.1",
+    "optimade[server]~=1.1",
     "pyyaml~=6.0",
-    "pymatgen>=2023.9",
-    "pandas >= 1.5, < 3",
     "tqdm~=4.65",
     "requests~=2.31",
     "numpy >= 1.22, < 3",
@@ -31,6 +29,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+ingest = ["ase ~= 3.22", "pymatgen >= 2023.9", "pandas >= 1.5, < 3"]
 tests = ["pytest~=8.3", "pytest-cov~=6.0"]
 dev = ["black", "ruff", "pre-commit", "mypy", "isort"]
 
