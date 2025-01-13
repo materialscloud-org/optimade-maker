@@ -1,13 +1,19 @@
 from pathlib import Path
 from typing import Any, Callable
 
-import ase.io
-import pandas
-import pymatgen.core
-import pymatgen.entries.computed_entries
+try:
+    import ase.io
+    import pandas
+    import pymatgen.core
+    import pymatgen.entries.computed_entries
+    from pymatgen.entries.computed_entries import ComputedStructureEntry
+except ImportError as exc:
+    raise ImportError(
+        "The parsers module requires the `ingest` extra of this package to be installed."
+    ) from exc
+
 from optimade.adapters import Structure
 from optimade.models import EntryResource
-from pymatgen.entries.computed_entries import ComputedStructureEntry
 
 from optimade_maker.config import PropertyDefinition
 
