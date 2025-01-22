@@ -40,6 +40,8 @@ def set_config_env_variables(config_dict):
         env_var = f"OPTIMADE_{key}"
         if isinstance(value, (dict, list, bool)):
             os.environ[env_var] = json.dumps(value)
+        elif value is None:
+            os.environ[env_var] = "null"
         else:
             os.environ[env_var] = str(value)
 
