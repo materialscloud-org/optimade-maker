@@ -25,7 +25,7 @@ def cli():
 @click.option(
     "--limit",
     type=int,
-    help="Limit the ingestion to a fixed number of structures (useful for testing)."
+    help="Limit the ingestion to a fixed number of structures (useful for testing).",
 )
 @click.argument(
     "path",
