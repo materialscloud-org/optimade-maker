@@ -29,7 +29,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-ingest = ["ase ~= 3.22", "pymatgen >= 2023.9", "pandas >= 1.5, < 3"]
+ase = ["ase ~= 3.22"]
+pymatgen = ["pymatgen >= 2023.9"]
+pandas = ["pandas >= 1.5, < 3"]
+ingest = ["optimade-maker[ase,pymatgen,pandas]"]
 tests = ["pytest~=8.3", "pytest-cov~=6.0"]
 dev = ["black", "ruff", "pre-commit", "mypy", "isort"]
 
