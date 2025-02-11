@@ -22,7 +22,7 @@ PROVIDER_PREFIX = os.environ.get("OPTIMAKE_PROVIDER_PREFIX", "optimake")
 
 def _construct_entry_type_info(
     type: str,
-    properties: list[PropertyDefinition],
+    properties: list[PropertyDefinition] | list[dict],
     provider_prefix: str,
 ) -> EntryInfoResource:
     """Take the provided property definitions and construct an entry info response.
@@ -39,15 +39,23 @@ def _construct_entry_type_info(
         )
 
     info: dict[str, Any] = {"formats": ["json"], "description": type}
-    info["properties"] = {
-        f"_{provider_prefix}_{p.name}": {
-            "description": p.description,
-            "unit": p.unit,
-            "type": p.type,
-            "title": p.title,
+    info["properties"] = {}
+    for p in properties:
+        if isinstance(p, PropertyDefinition):
+            p = p.dict()
+
+        p_name = (
+            f"_{provider_prefix}_{p['name']}"
+            if not p["name"].startswith(f"_{provider_prefix}")
+            else p["name"]
+        )
+        info["properties"][p_name] = {
+            "description": p.get("description"),
+            "unit": p.get("unit"),
+            "type": p.get("type"),
+            "title": p.get("title"),
         }
-        for p in properties
-    }
+
     info["properties"].update(default_properties)
     info["output_fields_by_format"] = {}
     info["output_fields_by_format"]["json"] = list(info["properties"].keys())
