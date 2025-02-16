@@ -28,6 +28,9 @@ dependencies = [
     "click~=8.1"
 ]
 
+[project.scripts]
+optimake = "optimade_maker.cli:cli"
+
 [build-system]
 requires = ["setuptools >= 62", "setuptools_scm ~= 8.1", "wheel"]
 build-backend = "setuptools.build_meta"
@@ -42,7 +45,7 @@ pymatgen = ["pymatgen >= 2023.9"]
 pandas = ["pandas >= 1.5, < 3"]
 ingest = ["optimade-maker[ase,pymatgen,pandas]"]
 tests = ["pytest~=8.3", "pytest-cov~=6.0"]
-dev = ["black", "ruff", "pre-commit", "mypy", "isort"]
+dev = ["ruff", "pre-commit", "mypy"]
 
 [tool.ruff]
 target-version = "py311"
@@ -56,14 +59,10 @@ per-file-ignores = {}
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
+[tool.ruff.lint.isort]
+known-first-party = ["optimade_maker"]
+
 [tool.mypy]
 plugins = "pydantic.mypy"
 ignore_missing_imports = true
 follow_imports = "skip"
-
-[tool.isort]
-known_first_party = "optimade_maker"
-profile = "black"
-
-[project.scripts]
-optimake = "optimade_maker.cli:cli"

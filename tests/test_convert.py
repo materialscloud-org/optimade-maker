@@ -57,9 +57,9 @@ def test_convert_example_archives(archive_path, tmp_path):
                 if next_entry.get("type") == first_entry["type"]:
                     break
             else:
-                assert (
-                    False
-                ), "No structures found in archive but test first entry was provided"
+                assert False, (
+                    "No structures found in archive but test first entry was provided"
+                )
 
             for key in ("id", "type", "relationships"):
                 assert next_entry[key] == first_entry[key]
