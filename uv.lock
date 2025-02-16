@@ -693,8 +693,7 @@ server = [
 
 [[package]]
 name = "optimade-maker"
-version = "0.4.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "click" },
     { name = "numpy" },
@@ -737,7 +736,7 @@ requires-dist = [
     { name = "mypy", marker = "extra == 'dev'" },
     { name = "numpy", specifier = ">=1.22,<3" },
     { name = "optimade", extras = ["server"], specifier = "~=1.1" },
-    { name = "optimade-maker", extras = ["ase", "pymatgen", "pandas"], marker = "extra == 'ingest'" },
+    { name = "optimade-maker", extras = ["ase", "pandas", "pymatgen"], marker = "extra == 'ingest'" },
     { name = "pandas", marker = "extra == 'pandas'", specifier = ">=1.5,<3" },
     { name = "pre-commit", marker = "extra == 'dev'" },
     { name = "pydantic", specifier = "~=2.2" },
