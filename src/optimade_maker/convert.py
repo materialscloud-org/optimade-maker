@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 import tqdm
+from optimade import __api_version__ as OPTIMADE_API_VERSION
 from optimade.models import EntryInfoResource, EntryResource
 from optimade.server.schemas import ENTRY_INFO_SCHEMAS, retrieve_queryable_properties
 
@@ -584,7 +585,7 @@ def write_optimade_jsonl(
 
     with open(jsonl_path, "a") as jsonl:
         # write the optimade jsonl header
-        header = {"x-optimade": {"meta": {"api_version": "1.1.0"}}}
+        header = {"x-optimade": {"meta": {"api_version": OPTIMADE_API_VERSION}}}
         jsonl.write(json.dumps(header))
         jsonl.write("\n")
 
