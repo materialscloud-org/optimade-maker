@@ -162,9 +162,9 @@ class ArchiveRecord:
         download_file(file_url, path, rename="optimade.yaml")
 
         # download files in record
-        if hasattr(self.mc_config.entries, "jsonl_path"):
+        if getattr(self.mc_config.entries, "jsonl_path", None):
             # case 1: jsonl file specified (either via `file: jsonl.gz` or `jsonl_path:`)
-            if hasattr(self.mc_config.entries, "file"):
+            if getattr(self.mc_config.entries, "file", None):
                 # download `file:`, if specified
                 file_url = self.get_file_url(self.mc_config.entries.file)
                 download_file(file_url, path)
@@ -176,7 +176,7 @@ class ArchiveRecord:
             # case 2: files specified as entry_paths/property_paths
             for entry in self.mc_config.entries:
                 list_of_files = [path.file for path in entry.entry_paths]
-                if hasattr(entry, "property_paths"):
+                if getattr(entry, "property_paths", None):
                     list_of_files += [path.file for path in entry.property_paths]
                 for fname in list_of_files:
                     file_url = self.get_file_url(fname)
