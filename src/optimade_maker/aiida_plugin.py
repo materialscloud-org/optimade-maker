@@ -111,7 +111,7 @@ def query_for_aiida_properties(structure_group, aiida_query) -> dict[str, Any]:
     qb.append(orm.Group, filters={"label": structure_group}, tag="group")
 
     current_node_class = orm.StructureData
-    qb_args = {"with_group": "group", "project": ["uuid"], "tag": "0"}
+    qb_args: dict[str, Any] = {"with_group": "group", "project": ["uuid"], "tag": "0"}
 
     # ensure that the aiida_query is a list
     aiida_query = aiida_query if isinstance(aiida_query, list) else [aiida_query]
@@ -224,7 +224,9 @@ def construct_entries_from_aiida(
             aiida.load_profile(aiida_profile, allow_switch=True)
         elif aiida_file := entry_config.entry_paths.aiida_file:
             file_path = archive_path / aiida_file
-            aiida.load_profile(get_aiida_profile_from_file(file_path), allow_switch=True)
+            aiida.load_profile(
+                get_aiida_profile_from_file(file_path), allow_switch=True
+            )
     except ProfileConfigurationError as e:
         raise ValueError(f"Error loading AiiDA profile: {e}")
 
