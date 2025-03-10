@@ -158,3 +158,8 @@ def test_unique_id_generator():
         "set2/3.xyz",
         "set2/4.xyz",
     ]
+
+    entry_ids = [
+        "data/structures/1.cif",
+    ]
+    assert _set_unique_entry_ids(entry_ids) == ["1"]

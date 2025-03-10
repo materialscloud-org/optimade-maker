@@ -321,6 +321,9 @@ def _set_unique_entry_ids(entry_ids: list[str]) -> list[str]:
 
     """
 
+    if len(entry_ids) == 1:
+        return [os.path.splitext(os.path.basename(entry_ids[0]))[0]]
+
     new_ids: list[str] = list(entry_ids)
 
     def _strip_common_path(ids, from_back=False):
