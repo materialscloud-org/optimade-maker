@@ -64,7 +64,10 @@ def _construct_entry_type_info(
 
 
 def convert_archive(
-    archive_path: Path, jsonl_path: Path | None = None, limit: int | None = None
+    archive_path: Path,
+    jsonl_path: Path | None = None,
+    limit: int | None = None,
+    overwrite: bool = False,
 ) -> Path:
     """Convert an MCloud entry to an OPTIMADE JSONL file.
 
@@ -96,7 +99,10 @@ def convert_archive(
         if jsonl_path != src_jsonl_path:
             # add a symlink to the specified jsonl_path
             if jsonl_path.exists():
-                raise RuntimeError(f"Not overwriting existing file at {jsonl_path}")
+                if overwrite:
+                    jsonl_path.unlink()
+                else:
+                    raise RuntimeError(f"Not overwriting existing file at {jsonl_path}")
             jsonl_path.symlink_to(archive_path / src_jsonl_path)
         return jsonl_path
 
@@ -132,6 +138,7 @@ def convert_archive(
         property_definitions,
         PROVIDER_PREFIX,
         jsonl_path,
+        overwrite,
     )
 
     return jsonl_path
@@ -563,6 +570,7 @@ def write_optimade_jsonl(
     property_definitions: dict[str, list[PropertyDefinition]],
     provider_prefix: str,
     jsonl_path: Path | None = None,
+    overwrite: bool = False,
 ) -> Path:
     """Write OPTIMADE entries to a JSONL file.
 
@@ -583,10 +591,10 @@ def write_optimade_jsonl(
     if not jsonl_path:
         jsonl_path = archive_path / "optimade.jsonl"
 
-    if jsonl_path.exists():
+    if jsonl_path.exists() and not overwrite:
         raise RuntimeError(f"Not overwriting existing file at {jsonl_path}")
 
-    with open(jsonl_path, "a") as jsonl:
+    with open(jsonl_path, "w") as jsonl:
         # write the optimade jsonl header
         header = {"x-optimade": {"meta": {"api_version": OPTIMADE_API_VERSION}}}
         jsonl.write(json.dumps(header))
