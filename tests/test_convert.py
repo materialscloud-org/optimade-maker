@@ -24,10 +24,12 @@ def test_convert_example_archives(archive_path, tmp_path):
     tmp_path = tmp_path / archive_path.name
     shutil.copytree(archive_path, tmp_path)
 
-    jsonl_path = convert_archive(tmp_path)
+    jsonl_path = convert_archive(tmp_path, overwrite=True)
     assert jsonl_path.exists()
 
-    jsonl_path_custom = convert_archive(tmp_path, jsonl_path=tmp_path / "test.jsonl")
+    jsonl_path_custom = convert_archive(
+        tmp_path, jsonl_path=tmp_path / "test.jsonl", overwrite=True
+    )
     assert jsonl_path_custom.exists()
 
     first_entry_path = archive_path / ".testing" / "first_entry.json"
