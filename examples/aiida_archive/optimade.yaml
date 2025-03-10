@@ -1,0 +1,76 @@
+config_version: 0.1.0
+
+database_description: >-
+  This example aiida database contains optimized structures and band structure calculations.
+
+entries:
+  - entry_type: structures
+    entry_paths:
+      aiida_file: example.aiida
+      aiida_group: optimade_structures
+      #aiida_profile: test-profile
+      #aiida_group: optimade_structures
+    property_paths:
+      # If all properties are stored in the AiiDA database,
+      # this can be omitted. But additional properties can be
+      # provided via a csv file.
+      - file: data.csv
+    property_definitions:
+      # ----
+      - name: test_extra
+        title: Test extra
+        description: Nested extra for testing.
+        type: string
+        aiida_query:
+          - project: extras.test.a
+      # ----
+      - name: ctime
+        title: Creation time
+        description: Time when the node was created.
+        type: timestamp
+        aiida_query:
+          - project: ctime
+      # ----
+      - name: energy
+        title: Total energy
+        description: The total energy computed by DFT
+        unit: eV
+        type: float
+        aiida_query:
+          - incoming_node: WorkChainNode
+          - outgoing_node: Dict
+            edge_filters:
+              label: scf_parameters
+          - project: attributes.energy
+      # ----
+      - name: band_gap
+        title: Band gap
+        description: Band gap of the material.
+        unit: eV
+        type: float
+        aiida_query:
+          - incoming_node: WorkChainNode
+          - outgoing_node: BandsData
+          - outgoing_node: CalcFunctionNode
+          - outgoing_node: Dict
+            edge_filters:
+              label: bandgap
+          - project: attributes.value
+      # ----
+      - name: is_band_gap_direct
+        title: Direct band gap
+        description: Is the band gap direct?
+        type: boolean
+        aiida_query:
+          - incoming_node: WorkChainNode
+          - outgoing_node: BandsData
+          - outgoing_node: CalcFunctionNode
+          - outgoing_node: Dict
+            edge_filters:
+              label: bandgap
+          - project: attributes.is_direct
+      # property provided by csv file:
+      - name: csv_property
+        title: Test property
+        description: Property from the csv file
+        type: integer

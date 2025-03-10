@@ -16,6 +16,7 @@ from optimade import __api_version__ as OPTIMADE_API_VERSION
 from optimade.models import EntryInfoResource, EntryResource
 from optimade.server.schemas import ENTRY_INFO_SCHEMAS, retrieve_queryable_properties
 
+from .aiida_plugin import AiidaEntryPath, construct_entries_from_aiida
 from .config import Config, EntryConfig, JSONLConfig, ParsedFiles, PropertyDefinition
 
 PROVIDER_PREFIX = os.environ.get("OPTIMAKE_PROVIDER_PREFIX", "optimake")
@@ -43,7 +44,7 @@ def _construct_entry_type_info(
     info["properties"] = {}
     for p in properties:
         if isinstance(p, PropertyDefinition):
-            p = p.dict()
+            p = p.model_dump()
 
         p_name = (
             f"_{provider_prefix}_{p['name']}"
@@ -69,7 +70,7 @@ def convert_archive(
     limit: int | None = None,
     overwrite: bool = False,
 ) -> Path:
-    """Convert an MCloud entry to an OPTIMADE JSONL file.
+    """Convert a raw data archive to an OPTIMADE JSONL file.
 
     Parameters:
         archive_path: The location of the `optimade.yaml` file to convert.
@@ -108,18 +109,18 @@ def convert_archive(
             jsonl_path.symlink_to(archive_path / src_jsonl_path)
         return jsonl_path
 
-    # first, decompress any provided data paths
-    data_paths: set[Path] = set()
+    # first, decompress any provided data archives
+    decompress_paths: set[Path] = set()
     for entry in mc_config.entries:
-        for e in entry.entry_paths:
-            if e.matches:
-                data_paths.add((archive_path / str(e.file)).resolve())
-        for p in entry.property_paths:
-            if p.matches:
-                data_paths.add((archive_path / str(p.file)).resolve())
+        for entry_path in entry.entry_paths:
+            if getattr(entry_path, "matches", None):
+                decompress_paths.add((archive_path / str(entry_path.file)).resolve())
+        for prop_path in entry.property_paths:
+            if getattr(prop_path, "matches", None):
+                decompress_paths.add((archive_path / str(prop_path.file)).resolve())
 
-    for data_path in data_paths:
-        inflate_archive(archive_path, data_path)
+    for decompress_path in decompress_paths:
+        inflate_archive(archive_path, decompress_path)
 
     optimade_entries: dict[str, list[dict]] = defaultdict(list)
 
@@ -490,7 +491,7 @@ def _parse_and_assign_properties(
             optimade_entries[id]["attributes"][f"_{provider_prefix}_{property}"] = value
 
 
-def construct_entries(
+def construct_entries_from_files(
     archive_path: Path,
     entry_config: EntryConfig,
     provider_prefix: str,
@@ -506,9 +507,7 @@ def construct_entries(
         RuntimeError: If the entry type is not supported.
         ValueError: If any of the files cannot be parsed into
             the given entry type.
-
     """
-
     from .parsers import ENTRY_PARSERS, OPTIMADE_CONVERTERS
 
     if entry_config.entry_type not in ENTRY_PARSERS:
@@ -533,12 +532,6 @@ def construct_entries(
 
     # Generate a better set of entry IDs
     unique_entry_ids = _set_unique_entry_ids(file_path_entry_ids)
-
-    # Parse properties
-    property_matches_by_file: dict[str | None, list[Path]] = _get_matches(
-        archive_path, entry_config.property_paths
-    )
-    _check_missing(property_matches_by_file)
 
     timestamp = datetime.datetime.now().isoformat()
 
@@ -586,8 +579,31 @@ def construct_entries(
             entry["attributes"]["immutable_id"] = file_path_entry_id
 
         entry["attributes"]["last_modified"] = timestamp
+    return optimade_entries
 
-    # Now try to parse the properties and assign them to OPTIMADE entries
+
+def construct_entries(
+    archive_path: Path,
+    entry_config: EntryConfig,
+    provider_prefix: str,
+    limit: int | None = None,
+) -> dict[str, dict]:
+    if isinstance(entry_config.entry_paths, AiidaEntryPath):
+        optimade_entries = construct_entries_from_aiida(
+            archive_path, entry_config, provider_prefix
+        )
+
+    else:
+        optimade_entries = construct_entries_from_files(
+            archive_path, entry_config, provider_prefix, limit=limit
+        )
+
+    # Parse properties from `property_paths` and assign them to the OPTIMADE entries
+    property_matches_by_file: dict[str | None, list[Path]] = _get_matches(
+        archive_path, entry_config.property_paths
+    )
+    _check_missing(property_matches_by_file)
+
     _parse_and_assign_properties(
         optimade_entries,
         property_matches_by_file,
