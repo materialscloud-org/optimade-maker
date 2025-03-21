@@ -17,6 +17,10 @@ def cli():
 
 
 @cli.command()
+@click.argument(
+    "path",
+    type=click.Path(),
+)
 @click.option(
     "--jsonl_path",
     type=click.Path(),
@@ -27,11 +31,12 @@ def cli():
     type=int,
     help="Limit the ingestion to a fixed number of structures (useful for testing).",
 )
-@click.argument(
-    "path",
-    type=click.Path(),
+@click.option(
+    "--overwrite",
+    is_flag=True,
+    help="Overwrite the JSONL file if it already exists.",
 )
-def convert(jsonl_path, path, limit=None):
+def convert(path, jsonl_path, limit=None, overwrite=False):
     """
     Convert a raw data archive into OPTIMADE JSONL.
 
@@ -43,7 +48,7 @@ def convert(jsonl_path, path, limit=None):
         jsonl_path = Path(jsonl_path)
         if jsonl_path.exists():
             raise FileExistsError(f"File already exists at {jsonl_path}.")
-    convert_archive(Path(path), jsonl_path=jsonl_path, limit=limit)
+    convert_archive(Path(path), jsonl_path=jsonl_path, limit=limit, overwrite=overwrite)
 
 
 @cli.command()
