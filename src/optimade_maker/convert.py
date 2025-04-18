@@ -411,6 +411,11 @@ def _parse_and_assign_properties(
                     for id in properties:
                         parsed_properties[id].update(properties[id])
                         all_property_fields |= set(properties[id].keys())
+                        if id not in optimade_entries:
+                            warnings.warn(
+                                f"Could not find entry {id!r} in OPTIMADE entries. This warning can be ignored if the property file uses fully qualified IDs.",
+                            )
+                            continue
                     break
                 except Exception as exc:
                     errors.append(exc)
@@ -443,6 +448,14 @@ def _parse_and_assign_properties(
         if property_entry_id is None:
             # try to find a matching ID based on the filename
             property_entry_id = id.split("/")[-1].split(".")[0]
+
+        if (property_entry_id not in parsed_properties) and (
+            id not in parsed_properties
+        ):
+            warnings.warn(
+                f"Could not find entry {id!r} (or fully-qualified {property_entry_id!r}) in parsed properties",
+            )
+            continue
 
         # Loop over all defined properties and assign them to the entry, setting to None if missing
         # Also cast types if provided
