@@ -437,9 +437,13 @@ def _parse_and_assign_properties(
     expected_property_fields = set(property_def_dict.keys())
 
     if expected_property_fields != all_property_fields:
-        warnings.warn(
-            f"Found {all_property_fields=} in data but {expected_property_fields} in config"
-        )
+        warning_message = "Mismatch between parsed property fields (A) and those defined in config (B)."
+        if all_property_fields - expected_property_fields:
+            warning_message += f"\n(A - B) = {all_property_fields - expected_property_fields} (will be omitted from API; if intended this can be ignored)."
+        if expected_property_fields - all_property_fields:
+            warning_message += f"\n(B - A) = {expected_property_fields - all_property_fields} (configured, but missing; check for typos or missing aliases)"
+
+        warnings.warn(warning_message)
 
     # Look for precisely matching IDs, or 'filename' matches
     for id in optimade_entries:
@@ -466,7 +470,7 @@ def _parse_and_assign_properties(
                 property, None
             ) or parsed_properties.get(id, {}).get(property, None)
             if property not in property_def_dict:
-                warnings.warn(f"Missing property definition for {property=}")
+                # These are already warned about above: fields that are not configured but are present in the property file
                 continue
             if value is not None and property_def_dict[property].type in TYPE_MAP:
                 try:
