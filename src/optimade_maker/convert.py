@@ -89,6 +89,8 @@ def convert_archive(
 
     if not jsonl_path:
         jsonl_path = archive_path / "optimade.jsonl"
+    if jsonl_path.exists() and not overwrite:
+        raise RuntimeError(f"Not overwriting existing file at {jsonl_path}")
 
     # if the config specifies just a JSON-L, then extract any archives
     # and return the JSONL path
