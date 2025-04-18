@@ -469,7 +469,12 @@ def _parse_and_assign_properties(
                 warnings.warn(f"Missing property definition for {property=}")
                 continue
             if value is not None and property_def_dict[property].type in TYPE_MAP:
-                value = TYPE_MAP[property_def_dict[property].type](value)
+                try:
+                    value = TYPE_MAP[property_def_dict[property].type](value)
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"Could not cast {value=} for {property=} to type {property_def_dict[property].type!r} for entry {id!r}"
+                    ) from exc
 
             optimade_entries[id]["attributes"][f"_{provider_prefix}_{property}"] = value
 
