@@ -57,6 +57,7 @@ def load_csv_file(
         for alias in prop.aliases or []:
             if alias in df:
                 df[prop.name] = df[alias]
+                df.drop(columns=[alias], inplace=True)
                 break
 
     return df.to_dict(orient="index")
