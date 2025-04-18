@@ -13,7 +13,7 @@ except ImportError as exc:
     ) from exc
 
 from optimade.adapters import Structure
-from optimade.models import EntryResource
+from optimade.models import DataType, EntryResource
 
 from optimade_maker.config import PropertyDefinition
 
@@ -68,11 +68,11 @@ PROPERTY_PARSERS: dict[
     ".csv": [load_csv_file],
 }
 
-TYPE_MAP: dict[str | None, type] = {
-    "float": float,
-    "string": str,
-    "integer": int,
-    "boolean": bool,
+TYPE_MAP: dict[DataType, type] = {
+    DataType.FLOAT: float,
+    DataType.STRING: str,
+    DataType.INTEGER: int,
+    DataType.BOOLEAN: bool,
 }
 
 

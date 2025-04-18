@@ -3,8 +3,10 @@ to indicate how an OPTIMADE API should be constructed from the entry.
 
 """
 
+from optimade.models.optimade_json import DataType
 from pydantic import ConfigDict, field_validator, model_validator
 
+IDENTIFIER_REGEX = r"^[a-z_][a-z_0-9]*$"
 __version__ = "0.1.0"
 
 from pathlib import Path
@@ -24,9 +26,10 @@ class PropertyDefinition(BaseModel):
     """
 
     name: str = Field(
-        description="""The field name of the property, as provided in the included
-the auxiliary property files.
-Will be served with a provider-specific prefix in the actual API, so must not start with an underscore."""
+        description="""The field name of the property to use in the API. Will be searched for in the included
+the auxiliary property files, unless `aliases` is also specified.
+Will be served with a provider-specific prefix in the actual API, so must not start with an underscore or contain upper case characters.""",
+        pattern=IDENTIFIER_REGEX,
     )
 
     title: Optional[str] = Field(
@@ -38,8 +41,7 @@ Will be served with a provider-specific prefix in the actual API, so must not st
     unit: Optional[str] = Field(
         None, description="The unit of the property, e.g. 'eV' or 'Å'."
     )
-    type: Optional[str] = Field(
-        None,
+    type: Optional[DataType] = Field(
         description="The OPTIMADE type of the property, e.g., `float` or `string`.",
     )
     maps_to: Optional[str] = Field(
