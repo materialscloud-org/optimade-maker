@@ -400,8 +400,7 @@ def _parse_and_assign_properties(
         return
 
     optimade_immutable_ids = {
-        entry["attributes"].get("immutable_id")
-        for entry in optimade_entries.values()
+        entry["attributes"].get("immutable_id") for entry in optimade_entries.values()
     }
 
     for archive_file in property_matches_by_file:
@@ -416,7 +415,10 @@ def _parse_and_assign_properties(
                     for id in properties:
                         parsed_properties[id].update(properties[id])
                         all_property_fields |= set(properties[id].keys())
-                        if id not in optimade_entries and id not in optimade_immutable_ids:
+                        if (
+                            id not in optimade_entries
+                            and id not in optimade_immutable_ids
+                        ):
                             warnings.warn(
                                 f"Could not find entry {id!r} in OPTIMADE entries.",
                             )
