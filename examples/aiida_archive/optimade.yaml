@@ -6,10 +6,9 @@ database_description: >-
 entries:
   - entry_type: structures
     entry_paths:
-      aiida_file: example.aiida
+      aiida_file: example.aiida  # Aiida archive file, or
+      #aiida_profile: test-profile  # Aiida profile
       aiida_group: optimade_structures
-      #aiida_profile: test-profile
-      #aiida_group: optimade_structures
     property_paths:
       # If all properties are stored in the AiiDA database,
       # this can be omitted. But additional properties can be

@@ -2,9 +2,9 @@
 
 The example AiiDA database contains three crystals:
 
-- diamond (C<sub>2</sub>);
-- GaAs;
-- MgO,
+- diamond (C<sub>2</sub>) (uuid: `4453cd37-17fd-4022-b571-ccd639bb6bd0`);
+- GaAs (uuid: `598c08c4-793f-4afb-b39e-d0c947821c6f`);
+- MgO (uuid: `c52d8ad2-2440-4b00-99ab-39b987d88c18`),
 
 where C<sub>2</sub> and GaAs have band structures calculated with Quantum Espresso, and MgO has no calculations done on it. The band structure calculation provenance is shown in the following schematic:
 

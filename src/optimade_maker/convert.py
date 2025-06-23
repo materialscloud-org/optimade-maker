@@ -380,34 +380,23 @@ def _set_unique_entry_ids(entry_ids: list[str]) -> list[str]:
     return new_ids
 
 
-def _parse_and_assign_properties(
-    optimade_entries: dict[str, EntryResource],
+def _parse_properties_from_files(
     property_matches_by_file: dict[str | None, list[Path]],
-    entry_type: str,
     property_definitions: list[PropertyDefinition],
-    provider_prefix: str,
-) -> None:
-    """Loop through the property matches by file and parse them into the combined
-    dictionary of OPTIMADE entries.
-
-    """
-    from .parsers import PROPERTY_PARSERS, TYPE_MAP
+) -> dict[str, dict[str, Any]]:
+    """Loop through the property matches by file and parse them into a dictionary"""
+    from .parsers import PROPERTY_PARSERS
 
     parsed_properties: dict[str, dict[str, Any]] = defaultdict(dict)
     errors = []
-    all_property_fields: set[str] = set()
 
     if not property_matches_by_file:
-        return
-
-    optimade_immutable_ids = {
-        entry["attributes"].get("immutable_id") for entry in optimade_entries.values()
-    }
+        return {}
 
     for archive_file in property_matches_by_file:
         for _path in tqdm.tqdm(
             property_matches_by_file[archive_file],
-            desc=f"Parsing properties for {entry_type} entries",
+            desc="Parsing property files",
         ):
             file_ext = _path.suffix
             for parser in PROPERTY_PARSERS[file_ext]:
@@ -415,15 +404,6 @@ def _parse_and_assign_properties(
                     properties = parser(_path, property_definitions)
                     for id in properties:
                         parsed_properties[id].update(properties[id])
-                        all_property_fields |= set(properties[id].keys())
-                        if (
-                            id not in optimade_entries
-                            and id not in optimade_immutable_ids
-                        ):
-                            warnings.warn(
-                                f"Could not find entry {id!r} in OPTIMADE entries.",
-                            )
-                            continue
                     break
                 except Exception as exc:
                     errors.append(exc)
@@ -432,17 +412,99 @@ def _parse_and_assign_properties(
                 raise RuntimeError(
                     f"Could not parse properties file {_path} with any of the provided parsers {PROPERTY_PARSERS[file_ext]}. Errors: {errors}"
                 )
-
     if not parsed_properties:
         raise RuntimeError(
             f"Could not parse properties files with any of the provided parsers. Errors: {errors}"
         )
+    return parsed_properties
 
-    # Match properties up to the descrptions provided in the config
+
+def _assign_and_validate_properties(
+    optimade_entries: dict[str, EntryResource],
+    parsed_properties: dict[str, dict[str, Any]],
+    property_definitions: list[PropertyDefinition],
+    provider_prefix: str,
+) -> None:
+    """Assign parsed properties to the OPTIMADE entries."""
+    from .parsers import TYPE_MAP
+
+    # Collect all property fields that are already present in the OPTIMADE entries
+    existing_property_fields: set[str] = set()
+    # Only check the first entry for property fields (it should have all the fields)
+    first_entry = next(iter(optimade_entries.values()), None)
+    if first_entry:
+        prefix = f"_{provider_prefix}_"
+        existing_property_fields |= set(
+            k[len(prefix) :]
+            for k in first_entry["attributes"].keys()
+            if k.startswith(prefix)
+        )
+
+    all_parsed_fields: set[str] = set()
+    for properties in parsed_properties.values():
+        all_parsed_fields |= set(properties.keys())
+
+    # Warn if any parsed property IDs does not exist in the OPTIMADE entries
+    optimade_immutable_ids = {
+        entry["attributes"].get("immutable_id") for entry in optimade_entries.values()
+    }
+    for id in parsed_properties:
+        if id not in optimade_entries and id not in optimade_immutable_ids:
+            warnings.warn(
+                f"Could not find entry {id!r} in OPTIMADE entries.",
+            )
+
+    # Match properties up to the descriptions provided in the config
     property_def_dict: dict[str, PropertyDefinition] = {
         p.name: p for p in property_definitions
     }
-    expected_property_fields = set(property_def_dict.keys())
+
+    if parsed_properties:
+        # Assign parsed properties to the OPTIMADE entries
+        # Look for precisely matching IDs, or 'filename' matches
+        for id in optimade_entries:
+            # detect any other compatible IDs; either those matching immutable ID or those matching the filename rule
+            property_entry_id = optimade_entries[id]["attributes"].get(
+                "immutable_id", None
+            )
+            if property_entry_id is None:
+                # try to find a matching ID based on the filename
+                property_entry_id = id.split("/")[-1].split(".")[0]
+
+            if (property_entry_id not in parsed_properties) and (
+                id not in parsed_properties
+            ):
+                warnings.warn(
+                    f"Could not find entry {id!r} (or fully-qualified {property_entry_id!r}) in parsed properties",
+                )
+                continue
+
+            # Loop over all defined properties and assign them to the entry, setting to None if missing
+            # Also cast types if provided
+            for property in all_parsed_fields:
+                # Look up both IDs: the file path-based ID or the ergonomic one
+                # Different property sources can use different ID schemes internally
+                value = parsed_properties.get(property_entry_id, {}).get(
+                    property, None
+                ) or parsed_properties.get(id, {}).get(property, None)
+                if property not in property_def_dict:
+                    # Fields that are not configured but are present in the property file, will be warned later
+                    continue
+                if value is not None and property_def_dict[property].type in TYPE_MAP:
+                    try:
+                        value = TYPE_MAP[property_def_dict[property].type](value)
+                    except Exception as exc:
+                        raise RuntimeError(
+                            f"Could not cast {value=} for {property=} to type {property_def_dict[property].type!r} for entry {id!r}"
+                        ) from exc
+
+                optimade_entries[id]["attributes"][f"_{provider_prefix}_{property}"] = (
+                    value
+                )
+
+    # Finally, check that all expected property fields are present
+    expected_property_fields = set(p.name for p in property_definitions)
+    all_property_fields = existing_property_fields | all_parsed_fields
 
     if expected_property_fields != all_property_fields:
         warning_message = "Mismatch between parsed property fields (A) and those defined in config (B)."
@@ -452,43 +514,6 @@ def _parse_and_assign_properties(
             warning_message += f"\n(B - A) = {expected_property_fields - all_property_fields} (configured, but missing; check for typos or missing aliases)"
 
         warnings.warn(warning_message)
-
-    # Look for precisely matching IDs, or 'filename' matches
-    for id in optimade_entries:
-        # detect any other compatible IDs; either those matching immutable ID or those matching the filename rule
-        property_entry_id = optimade_entries[id]["attributes"].get("immutable_id", None)
-        if property_entry_id is None:
-            # try to find a matching ID based on the filename
-            property_entry_id = id.split("/")[-1].split(".")[0]
-
-        if (property_entry_id not in parsed_properties) and (
-            id not in parsed_properties
-        ):
-            warnings.warn(
-                f"Could not find entry {id!r} (or fully-qualified {property_entry_id!r}) in parsed properties",
-            )
-            continue
-
-        # Loop over all defined properties and assign them to the entry, setting to None if missing
-        # Also cast types if provided
-        for property in all_property_fields:
-            # Look up both IDs: the file path-based ID or the ergonomic one
-            # Different property sources can use different ID schemes internally
-            value = parsed_properties.get(property_entry_id, {}).get(
-                property, None
-            ) or parsed_properties.get(id, {}).get(property, None)
-            if property not in property_def_dict:
-                # These are already warned about above: fields that are not configured but are present in the property file
-                continue
-            if value is not None and property_def_dict[property].type in TYPE_MAP:
-                try:
-                    value = TYPE_MAP[property_def_dict[property].type](value)
-                except Exception as exc:
-                    raise RuntimeError(
-                        f"Could not cast {value=} for {property=} to type {property_def_dict[property].type!r} for entry {id!r}"
-                    ) from exc
-
-            optimade_entries[id]["attributes"][f"_{provider_prefix}_{property}"] = value
 
 
 def construct_entries_from_files(
@@ -561,7 +586,7 @@ def construct_entries_from_files(
             )
 
         if not isinstance(entry, dict):
-            entry = entry.dict()
+            entry = entry.model_dump()
 
         if not entry["id"]:
             entry["id"] = unique_entry_id
@@ -604,10 +629,14 @@ def construct_entries(
     )
     _check_missing(property_matches_by_file)
 
-    _parse_and_assign_properties(
-        optimade_entries,
+    parsed_properties = _parse_properties_from_files(
         property_matches_by_file,
-        entry_config.entry_type,
+        entry_config.property_definitions,
+    )
+
+    _assign_and_validate_properties(
+        optimade_entries,
+        parsed_properties,
         entry_config.property_definitions,
         provider_prefix,
     )

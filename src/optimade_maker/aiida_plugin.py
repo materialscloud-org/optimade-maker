@@ -14,7 +14,7 @@ from aiida.common.exceptions import (
 )
 from aiida.storage.sqlite_zip.backend import SqliteZipBackend
 from optimade.adapters import Structure
-from optimade.models import EntryResource
+from optimade.models import DataType, EntryResource
 from pydantic import BaseModel, Field, model_validator
 
 if TYPE_CHECKING:
@@ -176,7 +176,7 @@ def convert_aiida_structure_to_optimade(
     aiida_structure: orm.StructureData,
 ) -> dict:
     pmg_structure = aiida_structure.get_pymatgen()
-    optimade_entry = Structure.ingest_from(pmg_structure).entry.dict()
+    optimade_entry = Structure.ingest_from(pmg_structure).entry.model_dump()
     optimade_entry["id"] = aiida_structure.uuid
     optimade_entry["attributes"]["immutable_id"] = aiida_structure.uuid
     optimade_entry["attributes"]["last_modified"] = aiida_structure.mtime.isoformat()
@@ -194,15 +194,15 @@ def _convert_property_type(type, value):
     """
     if value is None:
         return None
-    if type == "timestamp":
+    if type == DataType.TIMESTAMP:
         return value.isoformat()
-    if type == "boolean":
+    if type == DataType.BOOLEAN:
         return bool(value)
-    if type == "string":
+    if type == DataType.STRING:
         return str(value)
-    if type == "integer":
+    if type == DataType.INTEGER:
         return int(value)
-    if type == "float":
+    if type == DataType.FLOAT:
         return float(value)
     return value
 
@@ -254,5 +254,4 @@ def construct_entries_from_aiida(
                 optimade_entries[uuid]["attributes"][prop_name] = (
                     _convert_property_type(prop_def.type, prop)
                 )
-
     return optimade_entries
