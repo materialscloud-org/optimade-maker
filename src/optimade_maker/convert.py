@@ -520,7 +520,11 @@ def construct_entries(
         exceptions = {}
         for converter in OPTIMADE_CONVERTERS[entry_config.entry_type]:
             try:
-                entry = converter(entry, properties=entry_config.property_definitions, prefix=provider_prefix)  # type: ignore[call-arg]
+                entry = converter(
+                    entry,
+                    properties=entry_config.property_definitions,
+                    prefix=provider_prefix,
+                )  # type: ignore[call-arg]
                 if not isinstance(entry, dict):
                     entry = entry.entry
                 break

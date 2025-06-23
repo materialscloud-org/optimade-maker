@@ -125,7 +125,7 @@ ENTRY_PARSERS: dict[str, list[Callable[[Path], Any]]] = {
 def convert_pymatgen_computed_structure_entry(
     pmg_entry: ComputedStructureEntry,
     properties: list[PropertyDefinition] | None = None,
-    prefix: str | None = None
+    prefix: str | None = None,
 ) -> dict:
     """Convert a pymatgen ComputedStructureEntry to an OPTIMADE EntryResource."""
 
@@ -155,7 +155,12 @@ def structure_ingest_wrapper(entry, properties=None, prefix=None):  # type: igno
 
 
 OPTIMADE_CONVERTERS: dict[
-    str, list[Callable[[Any, list[PropertyDefinition] | None, str | None], EntryResource | dict]]
+    str,
+    list[
+        Callable[
+            [Any, list[PropertyDefinition] | None, str | None], EntryResource | dict
+        ]
+    ],
 ] = {
     "structures": [structure_ingest_wrapper, convert_pymatgen_computed_structure_entry],
 }
