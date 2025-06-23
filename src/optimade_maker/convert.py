@@ -399,6 +399,11 @@ def _parse_and_assign_properties(
     if not property_matches_by_file:
         return
 
+    optimade_immutable_ids = {
+        entry["attributes"].get("immutable_id")
+        for entry in optimade_entries.values()
+    }
+
     for archive_file in property_matches_by_file:
         for _path in tqdm.tqdm(
             property_matches_by_file[archive_file],
@@ -411,9 +416,9 @@ def _parse_and_assign_properties(
                     for id in properties:
                         parsed_properties[id].update(properties[id])
                         all_property_fields |= set(properties[id].keys())
-                        if id not in optimade_entries:
+                        if id not in optimade_entries and id not in optimade_immutable_ids:
                             warnings.warn(
-                                f"Could not find entry {id!r} in OPTIMADE entries. This warning can be ignored if the property file uses fully qualified IDs.",
+                                f"Could not find entry {id!r} in OPTIMADE entries.",
                             )
                             continue
                     break
