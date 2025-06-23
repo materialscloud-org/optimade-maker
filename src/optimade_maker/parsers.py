@@ -122,15 +122,14 @@ ENTRY_PARSERS: dict[str, list[Callable[[Path], Any]]] = {
 }
 
 
-def parse_computed_structure_entry(
+def convert_pymatgen_computed_structure_entry(
     pmg_entry: ComputedStructureEntry,
     properties: list[PropertyDefinition] | None = None,
+    prefix: str | None = None
 ) -> dict:
     """Convert a pymatgen ComputedStructureEntry to an OPTIMADE EntryResource."""
 
     entry = Structure.ingest_from(pmg_entry.structure).entry.dict()
-    entry["attributes"].update(pmg_entry.data)
-    entry["attributes"]["energy"] = pmg_entry.energy
     # try to find any unique ID fields and use it to overwrite the generated one
     for key in ("id", "mat_id", "task_id"):
         id = pmg_entry.data.get(key)
@@ -142,21 +141,21 @@ def parse_computed_structure_entry(
         # loop through any property aliases, saving the value if found and only checking
         # the real name if not
         for alias in p.aliases or []:
-            if value := pmg_entry.data.get(alias) is not None:
-                entry["attributes"][p.name] = value
+            if (value := pmg_entry.data.get(alias)) is not None:
+                entry["attributes"][f"_{prefix}_{p.name}"] = value
                 break
         else:
-            entry["attributes"][p.name] = pmg_entry.data.get(p.name)
+            entry["attributes"][f"_{prefix}_{p.name}"] = pmg_entry.data.get(p.name)
 
     return entry
 
 
-def structure_ingest_wrapper(entry, properties=None):  # type: ignore
+def structure_ingest_wrapper(entry, properties=None, prefix=None):  # type: ignore
     return Structure.ingest_from(entry)
 
 
 OPTIMADE_CONVERTERS: dict[
-    str, list[Callable[[Any, list[PropertyDefinition] | None], EntryResource | dict]]
+    str, list[Callable[[Any, list[PropertyDefinition] | None, str | None], EntryResource | dict]]
 ] = {
-    "structures": [structure_ingest_wrapper, parse_computed_structure_entry],
+    "structures": [structure_ingest_wrapper, convert_pymatgen_computed_structure_entry],
 }
