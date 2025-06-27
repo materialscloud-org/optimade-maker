@@ -201,8 +201,8 @@ def convert_aiida_structure_to_optimade(
     aiida_structure: orm.StructureData,
 ) -> dict:
     try:
-        pmg_structure = aiida_structure.get_pymatgen()
-        optimade_entry = Structure.ingest_from(pmg_structure).entry.model_dump()
+        ase_structure = aiida_structure.get_ase()
+        optimade_entry = Structure.ingest_from(ase_structure).entry.model_dump()
     except AttributeError as e:
         print(f"Error for structure {getattr(aiida_structure, 'uuid', 'unknown')}: {e}")
         raise
