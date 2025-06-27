@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -30,7 +31,10 @@ class AiidaEntryPath(BaseModel):
     aiida_profile: Optional[str] = Field(
         None, description="AiiDA profile that contains the structures."
     )
-    aiida_group: str = Field(description="AiiDA group that contains the structures.")
+    aiida_group: Optional[str] = Field(
+        None,
+        description="AiiDA group that contains the structures. 'None' assumes all StructureData nodes",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -90,17 +94,31 @@ class AiidaQueryItem(BaseModel):
         return values
 
 
-def query_for_aiida_structures(structure_group: str) -> dict[str, orm.StructureData]:
+def query_for_aiida_structures(
+    structure_group: str | None = None,
+) -> dict[str, orm.StructureData]:
     """
     Query for all aiida structures in the specified group
+    (or all structures if no group specified)
     """
     qb = orm.QueryBuilder()
-    qb.append(orm.Group, filters={"label": structure_group}, tag="group")
-    qb.append(orm.StructureData, with_group="group", project=["uuid", "*"])
+    if structure_group:
+        # check that the AiiDA group exists
+        try:
+            orm.load_group(structure_group)
+        except NotExistent:
+            raise ValueError(f"AiiDA group '{structure_group}' does not exist.")
+        qb.append(orm.Group, filters={"label": structure_group}, tag="group")
+        qb.append(orm.StructureData, with_group="group", project=["uuid", "*"])
+    else:
+        qb.append(orm.StructureData, project=["uuid", "*"])
+
     return {uuid: node for uuid, node in qb.all()}
 
 
-def query_for_aiida_properties(structure_group, aiida_query) -> dict[str, Any]:
+def query_for_aiida_properties(
+    aiida_query, structure_group: str | None = None
+) -> dict[str, Any]:
     """
     Query for structure properties based on the custom aiida query format
     specified in the yaml file.
@@ -108,10 +126,17 @@ def query_for_aiida_properties(structure_group, aiida_query) -> dict[str, Any]:
 
     # query for the structures
     qb = orm.QueryBuilder()
-    qb.append(orm.Group, filters={"label": structure_group}, tag="group")
+    qb_args: dict[str, Any] = {"project": ["uuid"], "tag": "0"}
+
+    if structure_group:
+        qb.append(orm.Group, filters={"label": structure_group}, tag="group")
+        qb_args["with_group"] = "group"
+    else:
+        warnings.warn(
+            "Missing structure group is not recommended when querying for properties."
+        )
 
     current_node_class = orm.StructureData
-    qb_args: dict[str, Any] = {"with_group": "group", "project": ["uuid"], "tag": "0"}
 
     # ensure that the aiida_query is a list
     aiida_query = aiida_query if isinstance(aiida_query, list) else [aiida_query]
@@ -230,13 +255,7 @@ def construct_entries_from_aiida(
     except ProfileConfigurationError as e:
         raise ValueError(f"Error loading AiiDA profile: {e}")
 
-    # check that the AiiDA group exists
     group_label = entry_config.entry_paths.aiida_group
-    try:
-        orm.load_group(group_label)
-    except NotExistent:
-        raise ValueError(f"AiiDA group '{group_label}' does not exist.")
-
     aiida_structures = query_for_aiida_structures(group_label)
 
     optimade_entries: dict[str, EntryResource] = {}
@@ -248,7 +267,7 @@ def construct_entries_from_aiida(
     for prop_def in entry_config.property_definitions or []:
         aiida_query = prop_def.aiida_query
         if aiida_query:
-            props = query_for_aiida_properties(group_label, aiida_query)
+            props = query_for_aiida_properties(aiida_query, group_label)
             for uuid, prop in props.items():
                 prop_name = f"_{provider_prefix}_{prop_def.name}"
                 optimade_entries[uuid]["attributes"][prop_name] = (
