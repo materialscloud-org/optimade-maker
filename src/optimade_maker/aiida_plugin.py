@@ -200,8 +200,13 @@ def get_aiida_profile_from_file(path: Path):
 def convert_aiida_structure_to_optimade(
     aiida_structure: orm.StructureData,
 ) -> dict:
-    pmg_structure = aiida_structure.get_pymatgen()
-    optimade_entry = Structure.ingest_from(pmg_structure).entry.model_dump()
+    try:
+        pmg_structure = aiida_structure.get_pymatgen()
+        optimade_entry = Structure.ingest_from(pmg_structure).entry.model_dump()
+    except AttributeError as e:
+        print(f"Error for structure {getattr(aiida_structure, 'uuid', 'unknown')}: {e}")
+        raise
+
     optimade_entry["id"] = aiida_structure.uuid
     optimade_entry["attributes"]["immutable_id"] = aiida_structure.uuid
     optimade_entry["attributes"]["last_modified"] = aiida_structure.mtime.isoformat()
