@@ -15,6 +15,8 @@ from typing import Optional
 import yaml
 from pydantic import BaseModel, Field
 
+from .aiida_plugin import AiidaEntryPath, AiidaQueryItem
+
 
 class UnsupportedConfigVersion(RuntimeError): ...
 
@@ -26,10 +28,10 @@ class PropertyDefinition(BaseModel):
     """
 
     name: str = Field(
-        description="""The field name of the property to use in the API. Will be searched for in the included
-the auxiliary property files, unless `aliases` is also specified.
-Will be served with a provider-specific prefix in the actual API, so must not start with an underscore or contain upper case characters.""",
-        pattern=IDENTIFIER_REGEX,
+        description=(
+            "The field name of the property, as provided in the included the auxiliary property files. "
+            "Will be served with a provider-specific prefix in the actual API, so must not start with an underscore."
+        )
     )
 
     title: Optional[str] = Field(
@@ -46,11 +48,21 @@ Will be served with a provider-specific prefix in the actual API, so must not st
     )
     maps_to: Optional[str] = Field(
         None,
-        description="A URI/URN for a canonical definition of the property, within the OPTIMADE extended format. Where possible, this should be a versioned URI.",
+        description=(
+            "A URI/URN for a canonical definition of the property, within the OPTIMADE extended format. "
+            "Where possible, this should be a versioned URI."
+        ),
     )
     aliases: Optional[list[str]] = Field(
         None,
-        description="A list of aliases to also search for for this property; `name` will be used for the field in the actual OPTIMADE API.",
+        description=(
+            "A list of aliases to also search for for this property; "
+            "`name` will be used for the field in the actual OPTIMADE API."
+        ),
+    )
+    aiida_query: Optional[list[AiidaQueryItem]] = Field(
+        None,
+        description=("A list of AiiDA QueryBuilder steps to retrieve this property."),
     )
     model_config = ConfigDict(extra="forbid")
 
@@ -62,7 +74,10 @@ class ParsedFiles(BaseModel):
 
     matches: Optional[list[str]] = Field(
         None,
-        description="A list of matches to be used to filter the file contents. Each match can use simple '*' wildcard syntax.",
+        description=(
+            "A list of matches to be used to filter the file contents. "
+            "Each match can use simple '*' wildcard syntax."
+        ),
         examples=[["structures/*.cif", "relaxed-structures/1.cif"]],
     )
     model_config = ConfigDict(extra="forbid")
@@ -72,8 +87,11 @@ class EntryConfig(BaseModel):
     entry_type: str = Field(
         description="The OPTIMADE entry type, e.g. `structures` or `references`."
     )
-    entry_paths: list[ParsedFiles] = Field(
-        description="A list of paths patterns to parse, provided relative to the top-level of the archive entry, after any compressed locations have been decompressed. Supports Python glob syntax for wildcards."
+    entry_paths: list[ParsedFiles] | AiidaEntryPath = Field(
+        description=(
+            "A list of paths patterns to parse, provided relative to the top-level of the archive entry, "
+            "after any compressed locations have been decompressed. Supports Python glob syntax for wildcards."
+        )
     )
 
     property_paths: list[ParsedFiles] = Field(

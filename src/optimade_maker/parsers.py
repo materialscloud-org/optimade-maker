@@ -130,7 +130,7 @@ def convert_pymatgen_computed_structure_entry(
 ) -> dict:
     """Convert a pymatgen ComputedStructureEntry to an OPTIMADE EntryResource."""
 
-    entry = Structure.ingest_from(pmg_entry.structure).entry.dict()
+    entry = Structure.ingest_from(pmg_entry.structure).entry.model_dump()
     # try to find any unique ID fields and use it to overwrite the generated one
     for key in ("id", "mat_id", "task_id"):
         id = pmg_entry.data.get(key)
