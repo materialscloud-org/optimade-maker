@@ -16,3 +16,8 @@ entries:
         description: The total energy per atom as computed by DFT
         unit: eV/atom
         type: float
+      - name: list_property
+        title: List property
+        description: A 3x3 matrix property encoded as a string
+        type: list
+        unit: null
