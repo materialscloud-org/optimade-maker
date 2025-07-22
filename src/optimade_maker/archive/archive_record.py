@@ -87,7 +87,7 @@ class ArchiveRecord:
         Get the metadata of a record by request the url.
         """
         try:
-            r = requests.get(self.url, allow_redirects=True, verify=False)
+            r = requests.get(self.url, timeout=30, allow_redirects=True, verify=False)
             s = json.loads(r.content.decode("utf-8"))
             return s["metadata"]
         except HTTPError as e:
@@ -128,7 +128,7 @@ class ArchiveRecord:
         """
         filename = self.optimade_config_name
         url = self.get_file_url(filename)
-        response = requests.get(url, allow_redirects=True)
+        response = requests.get(url, timeout=30, allow_redirects=True)
         if not response.status_code == 200:
             raise RuntimeError(f"Could not download {filename} file.")
         return response

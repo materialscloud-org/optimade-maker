@@ -1,5 +1,9 @@
+import json
+import warnings
 from pathlib import Path
 from typing import Any, Callable
+
+import numpy as np
 
 try:
     import ase.io
@@ -59,6 +63,23 @@ def load_csv_file(
                 df[prop.name] = df[alias]
                 df.drop(columns=[alias], inplace=True)
                 break
+
+    # Check for list/array-valued properties, being careful
+    # to reinterpret NaNs back into JSON `null` before trying
+    for prop in properties or []:
+        if prop.type == DataType.LIST:
+            try:
+                df[prop.name] = (
+                    df[prop.name]
+                    .fillna(np.nan)
+                    .replace([np.nan], ["null"])
+                    .apply(json.loads)
+                )
+            except Exception as exc:
+                warnings.warn(
+                    f"Tried to interpret property {prop.name!r} as a list, but an error was raised: {exc.__class__.__name__}: {exc!r}"
+                )
+                pass
 
     return df.to_dict(orient="index")
 

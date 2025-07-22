@@ -22,7 +22,7 @@ def get_all_records(base_url: str = DEFAULT_ARCHIVE_URL, limit: int = 9999) -> d
     Get all the records in the Materials Cloud Archive.
     """
     url = base_url + f"/api/records/?sort=mostrecent&page=1&size={limit}"
-    r = requests.get(url, allow_redirects=True, verify=False)
+    r = requests.get(url, timeout=30, allow_redirects=True, verify=False)
     s = json.loads(r.content.decode("utf-8"))
     records = s["hits"]["hits"]
     print("There are {} records in the Materials Cloud Archive.".format(len(records)))
@@ -46,7 +46,7 @@ def download_file(url: str, tmpdir: str, rename: str = "") -> str:
     """
     try:
         # when reading from archive or staging-invenio where the certificate is valid
-        response = urlopen(url)
+        response = urlopen(url, timeout=30)
 
         filename = os.path.basename(url).split("filename=")[1]
         if len(rename) > 0:
