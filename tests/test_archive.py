@@ -1,5 +1,9 @@
 import traceback
 
+import pytest
+import requests
+import urllib3
+
 from optimade_maker.config import UnsupportedConfigVersion
 
 archive_url = "https://staging-archive.materialscloud.org/"
@@ -16,6 +20,8 @@ def test_archive_record_metadata():
         assert record.is_optimade_record() is True
     except UnsupportedConfigVersion:
         traceback.print_exc()
+    except (urllib3.exceptions.ConnectTimeoutError, requests.exceptions.ConnectTimeout):
+        pytest.skip(f"Unable to connect to {archive_url}")
 
 
 def test_archive_record_process():
@@ -34,3 +40,5 @@ def test_archive_record_process():
         assert "structures.tar.gz" in files
     except UnsupportedConfigVersion:
         traceback.print_exc()
+    except (urllib3.exceptions.ConnectTimeoutError, requests.exceptions.ConnectTimeout):
+        pytest.skip(f"Unable to connect to {archive_url}")
