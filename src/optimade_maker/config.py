@@ -10,12 +10,13 @@ IDENTIFIER_REGEX = r"^[a-z_][a-z_0-9]*$"
 __version__ = "0.1.0"
 
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import yaml
 from pydantic import BaseModel, Field
 
-from .aiida_plugin import AiidaEntryPath, AiidaQueryItem
+if TYPE_CHECKING:
+    from .aiida_plugin import AiidaEntryPath, AiidaQueryItem
 
 
 class UnsupportedConfigVersion(RuntimeError): ...
