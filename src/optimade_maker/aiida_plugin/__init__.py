@@ -2,106 +2,47 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
-import aiida
-from aiida import orm
-from aiida.common.exceptions import (
-    CorruptStorage,
-    IncompatibleStorageSchema,
-    NotExistent,
-    ProfileConfigurationError,
-    UnreachableStorage,
-)
-from aiida.storage.sqlite_zip.backend import SqliteZipBackend
 from optimade.adapters import Structure
 from optimade.models import DataType, EntryResource
-from pydantic import BaseModel, Field, model_validator
 
 if TYPE_CHECKING:
-    from .config import EntryConfig
+    from aiida import orm
+
+    from optimade_maker.config import EntryConfig
+
+from optimade_maker.aiida_plugin.config import AiidaEntryPath
 
 
-class AiidaEntryPath(BaseModel):
-    """Config to specify an AiiDA entry path."""
+def _check_aiida_import():
+    """Check if AiiDA is installed and raise an ImportError if not."""
+    try:
+        import aiida
 
-    aiida_file: Optional[str] = Field(
-        None, description="AiiDA file that contains the structures."
-    )
-    aiida_profile: Optional[str] = Field(
-        None, description="AiiDA profile that contains the structures."
-    )
-    aiida_group: Optional[str] = Field(
-        None,
-        description="AiiDA group that contains the structures. 'None' assumes all StructureData nodes",
-    )
-
-    @model_validator(mode="before")
-    @classmethod
-    def check_file_or_profile(cls, values):
-        if isinstance(values, list):
-            # Skip validation for lists
-            return values
-        if not values.get("aiida_file") and not values.get("aiida_profile"):
-            raise ValueError("Either 'aiida_file' or 'aiida_profile' must be defined.")
-        if values.get("aiida_file") and values.get("aiida_profile"):
-            raise ValueError(
-                "Both 'aiida_file' and 'aiida_profile' cannot be defined at the same time."
-            )
-        return values
-
-
-class AiidaQueryItem(BaseModel):
-    """An item representing a step in an AiiDA query, which allows
-        * to project properties of the current node, or
-        * to move to a connected node in the AiiDA provenance graph.
-    In the case of querying for connected nodes, the usual AiiDA
-    QueryBuilder filters and edge_filters can be applied.
-    """
-
-    project: Optional[str] = Field(
-        None, description="The AiiDA attribute to project in the query."
-    )
-    incoming_node: Optional[str] = Field(
-        None, description="Query for an incoming node of the specified type."
-    )
-    outgoing_node: Optional[str] = Field(
-        None, description="Query for an outgoing node of the specified type."
-    )
-    filters: Optional[dict[Any, Any]] = Field(
-        None, description="filters passed to AiiDA QueryBuilder."
-    )
-    edge_filters: Optional[dict[Any, Any]] = Field(
-        None, description="edge_filters passed to AiiDA QueryBuilder."
-    )
-
-    @model_validator(mode="before")
-    @classmethod
-    def check_required_fields(cls, values):
-        if not any(
-            values.get(field) for field in ["project", "incoming_node", "outgoing_node"]
-        ):
-            raise ValueError(
-                "One of 'project', 'incoming_node', or 'outgoing_node' must be defined."
-            )
-        if values.get("filters") or values.get("edge_filters"):
-            if not any(
-                values.get(field) for field in ["incoming_node", "outgoing_node"]
-            ):
-                raise ValueError(
-                    "'filters' and 'edge_filters' can only be defined for 'incoming_node' or 'outgoing_node'."
-                )
-        return values
+        return aiida
+    except ImportError:
+        raise ImportError(
+            "The AiiDA plugin requires the `aiida-core` package to be installed. "
+            "Please install it with `pip install aiida-core`."
+        )
 
 
 def query_for_aiida_structures(
     structure_group: str | None = None,
-) -> dict[str, orm.StructureData]:
+) -> dict[str, "orm.StructureData"]:
     """
     Query for all aiida structures in the specified group
     (or all structures if no group specified)
     """
+    _check_aiida_import()
+    from aiida import orm
+    from aiida.common.exceptions import (
+        NotExistent,
+    )
+
     qb = orm.QueryBuilder()
+
     if structure_group:
         # check that the AiiDA group exists
         try:
@@ -123,6 +64,8 @@ def query_for_aiida_properties(
     Query for structure properties based on the custom aiida query format
     specified in the yaml file.
     """
+    aiida = _check_aiida_import()
+    from aiida import orm
 
     # query for the structures
     qb = orm.QueryBuilder()
@@ -185,6 +128,14 @@ def query_for_aiida_properties(
 
 
 def get_aiida_profile_from_file(path: Path):
+    _check_aiida_import()
+    from aiida.common.exceptions import (
+        CorruptStorage,
+        IncompatibleStorageSchema,
+        UnreachableStorage,
+    )
+    from aiida.storage.sqlite_zip.backend import SqliteZipBackend
+
     if not path.exists():
         raise FileNotFoundError(f"File not found: {path}")
 
@@ -200,6 +151,8 @@ def get_aiida_profile_from_file(path: Path):
 def convert_aiida_structure_to_optimade(
     aiida_structure: orm.StructureData,
 ) -> dict:
+    _check_aiida_import()
+
     try:
         ase_structure = aiida_structure.get_ase()
         optimade_entry = Structure.ingest_from(ase_structure).entry.model_dump()
@@ -242,6 +195,9 @@ def construct_entries_from_aiida(
     entry_config: EntryConfig,
     provider_prefix: str,
 ) -> dict[str, dict]:
+    aiida = _check_aiida_import()
+    from aiida.common.exceptions import ProfileConfigurationError
+
     if not isinstance(entry_config.entry_paths, AiidaEntryPath):
         raise RuntimeError("entry_paths is not AiiDA-specific.")
     if entry_config.entry_type != "structures":
@@ -278,4 +234,5 @@ def construct_entries_from_aiida(
                 optimade_entries[uuid]["attributes"][prop_name] = (
                     _convert_property_type(prop_def.type, prop)
                 )
+
     return optimade_entries

@@ -10,13 +10,12 @@ IDENTIFIER_REGEX = r"^[a-z_][a-z_0-9]*$"
 __version__ = "0.1.0"
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Union
+from typing import Optional, Union
 
 import yaml
 from pydantic import BaseModel, Field
 
-if TYPE_CHECKING:
-    from .aiida_plugin import AiidaEntryPath, AiidaQueryItem
+from .aiida_plugin.config import AiidaEntryPath, AiidaQueryItem
 
 
 class UnsupportedConfigVersion(RuntimeError): ...
@@ -61,7 +60,7 @@ class PropertyDefinition(BaseModel):
             "`name` will be used for the field in the actual OPTIMADE API."
         ),
     )
-    aiida_query: Optional[list["AiidaQueryItem"]] = Field(
+    aiida_query: Optional[list[AiidaQueryItem]] = Field(
         None,
         description=("A list of AiiDA QueryBuilder steps to retrieve this property."),
     )
@@ -88,7 +87,7 @@ class EntryConfig(BaseModel):
     entry_type: str = Field(
         description="The OPTIMADE entry type, e.g. `structures` or `references`."
     )
-    entry_paths: Union[list[ParsedFiles], "AiidaEntryPath"] = Field(
+    entry_paths: Union[list[ParsedFiles], AiidaEntryPath] = Field(
         description=(
             "A list of paths patterns to parse, provided relative to the top-level of the archive entry, "
             "after any compressed locations have been decompressed. Supports Python glob syntax for wildcards."
