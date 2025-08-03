@@ -71,6 +71,14 @@ jobs:
         run: |
           uv run pytest -vv --cov=./src/optimade_maker --cov-report=xml --cov-report=term ./tests
 
+      - name: Reinstall environment without aiida
+        run: |
+          uv sync --locked --extra core --extra test
+
+      - name: Rerun tests without aiida
+        run: |
+          uv run pytest -vv --cov=./src/optimade_maker --cov-report=xml --cov-report=term ./tests --ignore=./tests/aiida
+
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         if: matrix.python-version == '3.10'
