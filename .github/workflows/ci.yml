@@ -73,7 +73,7 @@ jobs:
 
       - name: Reinstall environment without aiida
         run: |
-          uv sync --locked --extra core --extra test
+          uv sync --locked --extra core --extra tests
 
       - name: Rerun tests without aiida
         run: |
