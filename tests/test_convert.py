@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import shutil
 from pathlib import Path
@@ -7,6 +8,8 @@ import pytest
 from optimade.models import EntryInfoResource
 
 from optimade_maker.convert import convert_archive
+
+AIIDA_AVAILABLE = bool(importlib.util.find_spec("aiida"))
 
 EXAMPLE_ARCHIVES = (Path(__file__).parent.parent / "examples").glob("*")
 
@@ -20,6 +23,11 @@ def test_convert_example_archives(archive_path, tmp_path):
     OPTIMADE API will be compared against this file.
 
     """
+
+    if "aiida" in archive_path.name and not AIIDA_AVAILABLE:
+        pytest.skip(
+            "Skipping test for AiiDA archive, as it requires AiiDA to be installed."
+        )
     # copy example into temporary path
     tmp_path = tmp_path / archive_path.name
     shutil.copytree(archive_path, tmp_path)
