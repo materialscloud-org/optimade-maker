@@ -16,7 +16,7 @@ from optimade import __api_version__ as OPTIMADE_API_VERSION
 from optimade.models import EntryInfoResource, EntryResource
 from optimade.server.schemas import ENTRY_INFO_SCHEMAS, retrieve_queryable_properties
 
-from .aiida_plugin import AiidaEntryPath, construct_entries_from_aiida
+from .aiida_plugin.config import AiidaEntryPath
 from .config import Config, EntryConfig, JSONLConfig, ParsedFiles, PropertyDefinition
 
 PROVIDER_PREFIX = os.environ.get("OPTIMAKE_PROVIDER_PREFIX", "optimake")
@@ -613,11 +613,23 @@ def construct_entries(
     provider_prefix: str,
     limit: int | None = None,
 ) -> dict[str, dict]:
-    if isinstance(entry_config.entry_paths, AiidaEntryPath):
+    try:
+        is_aiida_archive = isinstance(entry_config.entry_paths, AiidaEntryPath)
+
+    except Exception:
+        is_aiida_archive = False
+
+    if is_aiida_archive:
+        try:
+            from .aiida_plugin import construct_entries_from_aiida
+        except ImportError:
+            raise RuntimeError(
+                "The AiiDA plugin is not installed. Please install it with `pip install optimake[aiida]`."
+            )
+
         optimade_entries = construct_entries_from_aiida(
             archive_path, entry_config, provider_prefix
         )
-
     else:
         optimade_entries = construct_entries_from_files(
             archive_path, entry_config, provider_prefix, limit=limit
