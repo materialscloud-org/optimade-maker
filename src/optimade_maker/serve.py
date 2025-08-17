@@ -1,3 +1,22 @@
+"""
+This module provides the OptimakeServer class to handle the configuration and
+startup of an OPTIMADE API server using optimade-python-tools.
+
+The OptimakeServer also allows to prepare the API by
+* populating the MongoDB database; and
+* generating the optimade-python-tools configuration file,
+which allows to easily start the API externally (e.g. by another service).
+
+What requires special attention is the provider prefix, which is used
+to distinguish custom properties in the OPTIMADE entries. If the specified
+prefix is different from the one in the JSONL file, it needs to be replaced
+in the 1) configuration file, and 2) in the data entries themselves.
+
+Note also that when optimade python tools is first imported, it 1) loads the
+config; and 2) creates the MongoMock database (if used). This means that it
+should be imported after config is determined, and before populating the db.
+"""
+
 import json
 import os
 import traceback
@@ -8,20 +27,19 @@ import bson.json_util
 import uvicorn
 
 from optimade_maker.logger import LOGGER
+from optimade_maker.mongo_utils import populate_mongodb_from_jsonl
+
+PROVIDER_PREFIX = os.environ.get("OPTIMAKE_PROVIDER_PREFIX", "optimake")
 
 
-def get_optimake_provider_info(index_base_url=None):
-    info = {
-        "prefix": "optimake",
+def get_default_provider_info():
+    provider = {
+        "prefix": PROVIDER_PREFIX,
         "name": "Optimake",
         "description": "Provider created with optimade-maker",
         "homepage": "https://github.com/materialscloud-org/optimade-maker",
-        "index_base_url": index_base_url,
     }
-    if index_base_url:
-        info["index_base_url"] = index_base_url
-
-    return info
+    return provider
 
 
 def set_config_env_variables(config_dict):
@@ -35,6 +53,8 @@ def set_config_env_variables(config_dict):
     there doesn't seem to be a way to just pass in the config directly.
 
     Therefore, just specify the config through environment variables.
+
+    Note also that these variables only persist for this python process or any subprocess.
     """
     for key, value in config_dict.items():
         env_var = f"OPTIMADE_{key}"
@@ -46,9 +66,18 @@ def set_config_env_variables(config_dict):
             os.environ[env_var] = str(value)
 
 
-def get_provider_fields_from_jsonl(jsonl_path: Path):
+def replace_provider_prefix(name: str, provider_prefix: str) -> str:
+    """Replace the provider prefix in the property name with the new one."""
+    parts = name.split("_")
+    suffix = "_".join(parts[2:]) if len(parts) > 2 else ""
+    return f"_{provider_prefix}" + (f"_{suffix}" if suffix else "")
+
+
+def get_provider_fields_from_jsonl(
+    jsonl_path: Path, replace_prefix: str | None = None
+) -> dict:
     """
-    Go through the "info" collection of the corresponding MongoDB and get the
+    Go through the "info" collection of the jsonl and get the
     provider fields (custom properties)
     """
 
@@ -65,7 +94,9 @@ def get_provider_fields_from_jsonl(jsonl_path: Path):
             # if property name starts with underscore, it's a custom one
             if prop.startswith("_"):
                 provider_field_entry = {
-                    "name": prop,
+                    "name": replace_provider_prefix(prop, replace_prefix)
+                    if replace_prefix
+                    else prop,
                 }
                 # add only the keys that are not None.
                 for key in ["description", "unit", "type"]:
@@ -115,44 +146,56 @@ class OptimakeServer:
     Uses the MongoMock backend.
     """
 
-    def __init__(self, path: Path, port: int = 5000, **config_kws):
+    def __init__(
+        self,
+        path: Path,
+        host: str = "127.0.0.1",
+        port: int = 5000,
+        extra_config_file: Path | None = None,
+    ):
         """Initialise the OptimakeServer instance.
 
         Parameters:
             path: Path to the directory containing the optimade.jsonl file.
             port: Port to run the API on.
-            config_kws: Additional optimade-python-tools configuration options to pass to the API.
+            extra_config_file: Additional optimade-python-tools configuration options to pass to the API.
+            write_final_config: Output the final config file.
 
         """
         self.path = path
+        self.jsonl_path = self.path / "optimade.jsonl"
+        self.host = host
         self.port = port
-        self.config_kws = config_kws
 
-        self.base_url = f"http://localhost:{self.port}"
-        # self.index_base_url = "http://localhost:5001"
+        if not self.path.exists():
+            raise FileNotFoundError(f"Path {self.path} does not exist.")
+
+        self.extra_config_file = extra_config_file
+        if self.extra_config_file is not None:
+            self.extra_config_file = Path(self.extra_config_file)
+            if not self.extra_config_file.is_absolute():
+                # if relative path, assume it's w.r.t. the main folder
+                self.extra_config_file = self.path / self.extra_config_file
+            if not self.extra_config_file.exists():
+                raise FileNotFoundError(
+                    f"Path {self.extra_config_file} does not exist."
+                )
+
+        self.provider_prefix = None
+        self.optimade_config = self.get_optimade_config()
+        set_config_env_variables(self.optimade_config)
 
     def get_optimade_config(self):
-        jsonl_path = self.path / "optimade.jsonl"
-
-        provider_fields = get_provider_fields_from_jsonl(jsonl_path)
-
-        LOGGER.debug(f"PROVIDER_FIELDS: {provider_fields}")
-
+        # Default configuration options
         config_dict = {
             "debug": False,
             "insert_test_data": False,
-            "insert_from_jsonl": str(jsonl_path.resolve()),
-            "create_default_index": True,
-            "base_url": self.base_url,
-            "provider": get_optimake_provider_info(),
-            # "index_base_url": self.index_base_url,
-            "provider_fields": provider_fields,
-            "log_dir": str(self.path.resolve()),
+            "base_url": f"http://{self.host}:{self.port}",
+            "provider": get_default_provider_info(),
+            # "log_dir": ".",  # str(self.path.resolve()),
         }
 
-        config_dict.update(self.config_kws)
-
-        # Loop through any environment variables that start with "OPTIMAKE_" and set them
+        # Update/override config options if any `OPTIMAKE_` env variables are set
         for env in os.environ:
             if env.startswith("OPTIMAKE_"):
                 LOGGER.debug(
@@ -162,10 +205,79 @@ class OptimakeServer:
                 )
                 config_dict[env.replace("OPTIMAKE_", "").lower()] = os.environ[env]
 
-        LOGGER.debug(f"CONFIG: {config_dict}")
+        # Update/override config options if the extra_config_file is provided
+        if self.extra_config_file:
+            with open(self.extra_config_file, "r") as f:
+                extra_config = json.load(f)
+            config_dict.update(extra_config)
+
+        self.provider_prefix = config_dict.get("provider", {}).get("prefix")
+
+        # replace the provider prefix in the provider fields
+        provider_fields = get_provider_fields_from_jsonl(
+            self.jsonl_path, replace_prefix=self.provider_prefix
+        )
+
+        config_dict["provider_fields"] = provider_fields
+
+        LOGGER.debug(f"CONFIG: {json.dumps(config_dict, indent=2)}")
 
         return config_dict
 
+    def populate_mongodb(self, skip_mock: bool = False, drop_existing_db: bool = False):
+        """
+        Determine the backend: external or mock MongoDB,
+        and populate it from JSONL.
+        """
+        db_backend = self.optimade_config.get("database_backend", "mongomock")
+        db_name = self.optimade_config.get("mongo_database", "optimade")
+        if db_backend == "mongodb":
+            # External MongoDB backend
+            LOGGER.info("`Using an external MongoDB backend.")
+            try:
+                import pymongo
+            except ImportError:
+                raise ImportError(
+                    "External MongoDB requires the `mongo` extra dependency to be installed."
+                )
+            mongo_uri = self.optimade_config["mongo_uri"]
+            client = pymongo.MongoClient(mongo_uri)
+
+            if db_name in client.list_database_names():
+                # DB already exists
+                if drop_existing_db:
+                    LOGGER.info(f"Dropping existing database '{db_name}'...")
+                    client.drop_database(db_name)
+                else:
+                    LOGGER.info(
+                        f"Database '{db_name}' already exists, skipping data injection."
+                    )
+                    return
+
+            mongo_db = client[db_name]
+        elif db_backend == "mongomock":
+            # The default MongoMock backend
+            LOGGER.info("Using the MongoMock backend.")
+            if skip_mock:
+                return
+            # Importing optimade python tools loads the config and creates the mongomock
+            # client that we need to populate.
+            from optimade.server.entry_collections.mongo import CLIENT
+
+            mongo_db = CLIENT[db_name]
+        else:
+            raise ValueError(
+                f"Unknown database backend '{db_backend}'. "
+                "Supported backends are 'mongodb' and 'mongomock'."
+            )
+
+        LOGGER.info("Populating the database...")
+        populate_mongodb_from_jsonl(
+            self.jsonl_path, mongo_db, replace_prefix=self.provider_prefix
+        )
+
     def start_api(self):
-        set_config_env_variables(self.get_optimade_config())
-        uvicorn.run("optimade.server.main:app", host="0.0.0.0", port=self.port)
+        # Importing optimade loads config (if not imported already before)
+        from optimade.server.main import app
+
+        uvicorn.run(app, host=self.host, port=self.port)

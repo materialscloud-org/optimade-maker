@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import click
@@ -53,16 +54,46 @@ def convert(path, jsonl_path, limit=None, overwrite=False):
 
 @cli.command()
 @click.option(
+    "--host",
+    type=str,
+    default="127.0.0.1",
+    help="The host to bind the API to (e.g., 127.0.0.1 or 0.0.0.0).",
+)
+@click.option(
     "--port",
     type=int,
     default=5000,
     help="The port to serve the API on.",
 )
+@click.option(
+    "--extra_config_file",
+    type=click.Path(),
+    help="Custom configuration options in a JSON file.",
+)
+@click.option(
+    "--write_config",
+    type=click.Path(),
+    help="Write the API config file. If not set, the config is not written.",
+)
+@click.option(
+    "--drop_existing_db",
+    is_flag=True,
+    default=False,
+    help="Drop and re-populate MongoDB if it already exists.",
+)
+@click.option(
+    "--prepare_only",
+    is_flag=True,
+    default=False,
+    help="Only prepare the data and config, don't start the API.",
+)
 @click.argument(
     "path",
     type=click.Path(),
 )
-def serve(port, path):
+def serve(
+    host, port, extra_config_file, write_config, drop_existing_db, prepare_only, path
+):
     """
     Serve a raw data archive with an OPTIMADE API.
 
@@ -70,8 +101,11 @@ def serve(port, path):
     file at the top level. If needed, the data is first converted into an OPTIMADE JSONL
     file. However, if the JSONL file already exists, the API is started from it.
 
-    Note that this command starts the API using a simple backend, which is not recommended
-    for a production environment.
+    Use `--extra_config_file` or set `OPTIMADE_*` env variables to pass in additional
+    configuration options such a custom provider or a real MongoDB backend.
+
+    Use `--prepare_only` and `--write_config` to populate a MongoDB and write an optimade
+    config file, which allows to easily start the API externally/independently.
     """
 
     jsonl_file = "optimade.jsonl"
@@ -83,9 +117,25 @@ def serve(port, path):
     else:
         LOGGER.info(f"{jsonl_file} already exists!")
 
-    LOGGER.info("Starting the API")
-    optimake_server = OptimakeServer(path, port)
-    optimake_server.start_api()
+    LOGGER.info("Preparing to start the API...")
+    optimake_server = OptimakeServer(path, host, port, extra_config_file)
+
+    if write_config is not None:
+        write_config = Path(write_config)
+        if not write_config.is_absolute():
+            # if relative path, assume it's w.r.t. the main folder
+            write_config = path / write_config
+        with open(write_config, "w") as f:
+            json.dump(optimake_server.optimade_config, f, indent=2)
+        LOGGER.info(f"Final config written to {write_config}")
+
+    optimake_server.populate_mongodb(
+        skip_mock=prepare_only, drop_existing_db=drop_existing_db
+    )
+
+    if not prepare_only:
+        LOGGER.info("Starting the API")
+        optimake_server.start_api()
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import shutil
 import subprocess
 import time
@@ -12,7 +13,7 @@ AIIDA_AVAILABLE = bool(importlib.util.find_spec("aiida"))
 EXAMPLE_ARCHIVES = (Path(__file__).parent.parent / "examples").glob("*")
 
 
-def wait_for_server_to_start(url, retries=20, delay=1):
+def wait_for_server_to_start(url, retries=5, delay=1):
     for _ in range(retries):
         try:
             response = requests.get(url)
@@ -36,14 +37,36 @@ def test_serve_example_archives(archive_path, tmp_path):
     tmp_path = tmp_path / archive_path.name
     shutil.copytree(archive_path, tmp_path)
 
+    extra_config_file = "extra_config.json"
+    extra_config = None
+    if (tmp_path / extra_config_file).is_file():
+        with open(tmp_path / extra_config_file, "r") as f:
+            extra_config = json.load(f)
+    custom_prefix = None
+    if extra_config is not None:
+        custom_prefix = extra_config.get("provider", {}).get("prefix")
+
     # use an uncommon port that hopefully is unused
-    port = 43485
+    port = 43486
+    host = "127.0.0.1"
 
     # use subprocess to start the api via the cli
-    command = ["optimake", "serve", "--port", str(port), str(tmp_path)]
+    command = [
+        "optimake",
+        "serve",
+        "--host",
+        str(host),
+        "--port",
+        str(port),
+        "--write_config",
+        "final_config.json",
+    ]
+    if extra_config is not None:
+        command += ["--extra_config_file", extra_config_file]
+    command += [str(tmp_path)]
     process = subprocess.Popen(command)
 
-    url = f"http://0.0.0.0:{port}"
+    url = f"http://{host}:{port}"
 
     try:
         if not wait_for_server_to_start(url):
@@ -58,6 +81,12 @@ def test_serve_example_archives(archive_path, tmp_path):
         response = requests.get(f"{url}/info")
         assert response.status_code == 200
         response = requests.get(f"{url}/info/structures")
+
+        props = response.json()["data"]["properties"]
+        custom_prop_keys = [k for k, v in props.items() if k.startswith("_")]
+        if custom_prefix is not None:
+            assert all(k.startswith(f"_{custom_prefix}") for k in custom_prop_keys)
+
         assert response.status_code == 200
         response = requests.get(f"{url}/info/references")
         assert response.status_code == 200
@@ -76,6 +105,13 @@ def test_serve_example_archives(archive_path, tmp_path):
         assert "type" in struct_entry
         assert struct_entry["type"] == "structures"
 
+        props = struct_entry["attributes"]
+        custom_prop_keys = [k for k in props.keys() if k.startswith("_")]
+        if custom_prefix is not None:
+            assert all(k.startswith(f"_{custom_prefix}") for k in custom_prop_keys)
+
     finally:
         process.terminate()
         process.wait()
+
+    assert (tmp_path / "final_config.json").is_file()
