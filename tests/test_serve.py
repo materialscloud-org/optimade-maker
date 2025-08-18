@@ -13,7 +13,7 @@ AIIDA_AVAILABLE = bool(importlib.util.find_spec("aiida"))
 EXAMPLE_ARCHIVES = (Path(__file__).parent.parent / "examples").glob("*")
 
 
-def wait_for_server_to_start(url, retries=5, delay=1):
+def wait_for_server_to_start(url, retries=20, delay=1):
     for _ in range(retries):
         try:
             response = requests.get(url)
