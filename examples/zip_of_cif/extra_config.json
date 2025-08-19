@@ -1,0 +1,8 @@
+{
+  "provider": {
+    "prefix": "example",
+    "name": "Example Provider",
+    "description": "An example provider for demonstration purposes.",
+    "homepage": "https://example.com"
+  }
+}

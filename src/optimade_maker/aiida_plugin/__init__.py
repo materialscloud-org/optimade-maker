@@ -23,8 +23,7 @@ def _check_aiida_import():
         return aiida
     except ImportError:
         raise ImportError(
-            "The AiiDA plugin requires the `aiida-core` package to be installed. "
-            "Please install it with `pip install aiida-core`."
+            "The AiiDA plugin requires the `aiida` extra dependency to be installed."
         )
 
 

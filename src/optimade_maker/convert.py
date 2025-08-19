@@ -607,6 +607,16 @@ def construct_entries_from_files(
     return optimade_entries
 
 
+def _remove_ase_fields(optimade_entries: dict[str, EntryResource]) -> None:
+    """In-place: remove top-level _ase* keys from each entry's attributes dict."""
+    for entry in optimade_entries.values():
+        attrs = entry.get("attributes")
+        if isinstance(attrs, dict):
+            entry["attributes"] = {
+                k: v for k, v in attrs.items() if not k.startswith("_ase")
+            }
+
+
 def construct_entries(
     archive_path: Path,
     entry_config: EntryConfig,
@@ -652,6 +662,8 @@ def construct_entries(
         entry_config.property_definitions,
         provider_prefix,
     )
+
+    _remove_ase_fields(optimade_entries)
 
     return optimade_entries
 
@@ -702,12 +714,6 @@ def write_optimade_jsonl(
         for entry_type in optimade_entries:
             if optimade_entries[entry_type]:
                 for entry_dict in optimade_entries[entry_type]:
-                    attributes = {
-                        k: entry_dict["attributes"][k]
-                        for k in entry_dict["attributes"]
-                        if not k.startswith("_ase")
-                    }
-                    entry_dict["attributes"] = attributes
                     jsonl.write(json.dumps(entry_dict))
                     jsonl.write("\n")
 
