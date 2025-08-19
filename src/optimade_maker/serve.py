@@ -237,9 +237,7 @@ class OptimakeServer:
             try:
                 import pymongo
             except ImportError:
-                raise ImportError(
-                    "External MongoDB requires the `mongo` extra dependency to be installed."
-                )
+                raise ImportError("External MongoDB requires `pymongo`.")
             mongo_uri = self.optimade_config["mongo_uri"]
             client = pymongo.MongoClient(mongo_uri)
 

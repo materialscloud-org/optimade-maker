@@ -21,6 +21,8 @@ classifiers = [
 dependencies = [
   "pydantic~=2.2",
   "optimade[server]~=1.1",
+  "pymongo",
+  "bson",
   "pyyaml~=6.0",
   "tqdm~=4.65",
   "requests~=2.31",
@@ -46,7 +48,6 @@ pandas = ["pandas >= 1.5, < 3"]
 aiida = ["aiida-core >= 2.6.3"]
 core = ["optimade-maker[ase,pymatgen,pandas]"]
 ingest = ["optimade-maker[ase,pymatgen,pandas,aiida]"]
-mongo = ["pymongo>=4.13.2"]
 tests = ["pytest~=8.3", "pytest-cov~=6.0"]
 dev = ["ruff", "pre-commit", "mypy"]
 
