@@ -16,12 +16,12 @@
 
 Tools for making [OPTIMADE APIs](https://optimade.org) from various formats of structural data (e.g. an archive of CIF files).
 
-This repository contains the `src/optimade-maker` Python package and the corresponding CLI tool `optimake` that work towards this aim. Features include
+This repository contains the src/optimade-maker Python package and the corresponding CLI tool optimake, which together provide this functionality. Features include
 
 - definition of a config file format (`optimade.yaml`) for annotating data archives to be used in the OPTIMADE ecosystem;
 - conversion of the raw data into corresponding OPTIMADE types using pre-existing parsers (e.g., ASE for structures);
-- conversion of the annotated data archive into an intermediate JSONLines file format that can be ingested into a database and used to serve a full OPTIMADE API.
-- serving either an annotated data archive or a JSONLines file as an OPTIMADE API (using the [`optimade-python-tools`](https://github.com/Materials-Consortia/optimade-python-tools/)
+- conversion of the annotated data archive into the OPTIMADE JSON Lines file format ([spec](https://github.com/Materials-Consortia/OPTIMADE/blob/develop/optimade.rst#the-optimade-json-lines-format-for-database-exchange)) that can be ingested into a database and used to serve a full OPTIMADE API.
+- serving either an annotated data archive or a JSON Lines file as an OPTIMADE API (using the [`optimade-python-tools`](https://github.com/Materials-Consortia/optimade-python-tools/)
   reference server implementation).
 
 ## Usage
@@ -33,7 +33,7 @@ See `./examples` for a more complete set of supported formats and corresponding 
 To annotate your structural data for `optimade-maker`, the data archive needs to be accompanied by an `optimade.yaml` config file. The following is a simple example for a zip archive (`structures.zip`) of cif files together with an optional property file (`data.csv`):
 
 ```yaml
-config_version: 0.1.0
+config_version: 0.1.1
 database_description: Simple database
 
 entries:
@@ -48,7 +48,7 @@ entries:
     property_definitions:
       - name: energy
         title: Total energy per atom
-        description: The total energy per atom as computed by DFT
+        description: DFT total energy per atom
         unit: eV/atom
         type: float
 ```
@@ -89,38 +89,14 @@ For a folder containing the data archive and the `optimade.yaml` file (such as i
 
 For more detailed information see also `optimake --help`.
 
-## `optimade-maker` JSONLines Format
-
-As described above, `optimade-maker` works via an intermediate JSONLines file representation of an OPTIMADE API (see also the [corresponding issue in the specification](https://github.com/Materials-Consortia/OPTIMADE/issues/471)).
-This file should provide enough metadata to spin up an OPTIMADE API with many different entry types.
-The format is as follows:
-
-- First line must be a dictionary with the key `x-optimade`, containing a sub-dictionary of metadata (such as the OPTIMADE API version).
-- Second line contains the `info/structures` endpoint.
-- Third line contains the `info/references` endpoint, if present.
-- Then each line contains an entry from the corresponding individual structure/reference endpoints.
-
-```json
-{"x-optimade": {"meta": {"api_version": "1.1.0"}}}
-{"type": "info", "id": "structures", "properties": {...}}
-{"type": "info", "id": "references", "properties": {...}}
-{"type": "structures", "id": "1234", "attributes": {...}}
-{"type": "structures", "id": "1235", "attributes": {...}}
-{"type": "references", "id": "sfdas", "attributes": {...}}
-```
-
-NOTE: the `info/` endpoints in [OPTIMADE v1.2.0](https://www.optimade.org/specification/#entry-listing-info-endpoints) will include `type` and `id` as well.
-
 ## Relevant links
 
-- [Roadmap and meeting notes](https://docs.google.com/document/d/1cIpwuX6Ty5d3ZHKYWktQaBBQcI9fYmgG_hsD1P1UpO4/edit)
-- [OPTIMADE serialization format notes](https://docs.google.com/document/d/1vf8_qxSRP5lCSb0P3M9gTr6nqkERxgOoSDno6YLcCjo/edit)
-- [Flow diagram](https://excalidraw.com/#json=MBNl66sARCQekVrKZXDg8,K35f5FwmiS46vlsYGMJdrw)
+- [OPTIMADE specification](https://github.com/Materials-Consortia/OPTIMADE/blob/develop/optimade.rst)
+- [OPTIMADE specification: JSON Lines format](https://github.com/Materials-Consortia/OPTIMADE/blob/develop/optimade.rst#the-optimade-json-lines-format-for-database-exchange)
 
 ## Contributors
 
-Initial prototype was created at the Paul Scherrer Institute, Switzerland in the week of
-12th-16th June 2023.
+The initial prototype was created at the Paul Scherrer Institute, Switzerland, during the week of 12–16 June 2023.
 
 Authors (alphabetical):
 
