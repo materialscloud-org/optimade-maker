@@ -1,4 +1,4 @@
-config_version: 0.1.0
+config_version: 0.1.1
 
 database_description: >-
   This example aiida database contains optimized structures and band structure calculations.

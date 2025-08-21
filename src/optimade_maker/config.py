@@ -7,7 +7,9 @@ from optimade.models.optimade_json import DataType
 from pydantic import ConfigDict, field_validator, model_validator
 
 IDENTIFIER_REGEX = r"^[a-z_][a-z_0-9]*$"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
+_SUPPORTED_CONFIG_VERSIONS = {"0.1.0", "0.1.1"}
+
 
 from pathlib import Path
 from typing import Optional, Union
@@ -140,7 +142,7 @@ class Config(BaseModel):
     """
 
     config_version: str = Field(
-        "0.1.0",
+        __version__,
         description="The version of the `optimade.yaml` config specification.",
     )
 
@@ -173,9 +175,22 @@ class Config(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def validate_config_version(cls, values):
-        if values.get("config_version") is None:
-            raise UnsupportedConfigVersion(f"Config version must be {__version__}.")
+    def validate_config_version(cls, values: dict):
+        v = values.get("config_version")
+
+        # If missing, keep current behavior: require explicit version
+        if v is None:
+            raise UnsupportedConfigVersion(
+                f"Missing config_version. Supported versions are: {sorted(_SUPPORTED_CONFIG_VERSIONS)}. "
+                f"The current version is {__version__}."
+            )
+
+        if v not in _SUPPORTED_CONFIG_VERSIONS:
+            raise UnsupportedConfigVersion(
+                f"Unsupported config_version {v!r}. "
+                f"Supported versions are: {sorted(_SUPPORTED_CONFIG_VERSIONS)}."
+            )
+
         return values
 
     model_config = ConfigDict(extra="forbid")
