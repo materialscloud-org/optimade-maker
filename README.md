@@ -106,3 +106,18 @@ Authors (alphabetical):
 - Gian-Marco Rignanese
 - Jusong Yu
 - Xing Wang
+
+## For developers
+
+### Releasing a new version
+
+This project uses `setuptools_scm`, which reads the version from git tags. To release a new version:
+
+```bash
+git checkout main
+git pull
+git tag -a vX.Y.Z -m "Release X.Y.Z"
+git push --tags
+```
+
+This will trigger the Github Action that will create 1) a Github release; and 2) build and publish the package on pypi.
