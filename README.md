@@ -77,7 +77,7 @@ structures.zip/cifs/set2/102.cif,3.2
 Install with
 
 ```bash
-pip install optimade-maker
+pip install optimade-maker[ingest]
 ```
 
 this will also make the `optimake` CLI utility available.
