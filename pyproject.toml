@@ -22,7 +22,6 @@ dependencies = [
   "pydantic~=2.2",
   "optimade[server]~=1.1",
   "pymongo",
-  "bson",
   "pyyaml~=6.0",
   "tqdm~=4.65",
   "requests~=2.31",

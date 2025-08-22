@@ -212,16 +212,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/92/8d/e296c7af03757debd8fc80df2898cbed4fb69fc61ed2c9b4a1d42e923a9e/bibtexparser-1.4.3.tar.gz", hash = "sha256:a9c7ded64bc137720e4df0b1b7f12734edc1361185f1c9097048ff7c35af2b8f", size = 55582, upload-time = "2024-12-19T20:41:57.754Z" }
 
 [[package]]
-name = "bson"
-version = "0.5.10"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "python-dateutil" },
-    { name = "six" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4d/53/7c534a38850f2252275d7f949aed2219095e90df1e2d180a9c8ed139e499/bson-0.5.10.tar.gz", hash = "sha256:d6511b2ab051139a9123c184de1a04227262173ad593429d21e443d6462d6590", size = 10363, upload-time = "2020-05-26T11:13:47.979Z" }
-
-[[package]]
 name = "certifi"
 version = "2025.8.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1395,7 +1385,6 @@ server = [
 name = "optimade-maker"
 source = { editable = "." }
 dependencies = [
-    { name = "bson" },
     { name = "click" },
     { name = "numpy" },
     { name = "optimade", extra = ["server"] },
@@ -1444,7 +1433,6 @@ tests = [
 requires-dist = [
     { name = "aiida-core", marker = "extra == 'aiida'", specifier = ">=2.6.3" },
     { name = "ase", marker = "extra == 'ase'", specifier = "~=3.22" },
-    { name = "bson" },
     { name = "click", specifier = "~=8.1" },
     { name = "mypy", marker = "extra == 'dev'" },
     { name = "numpy", specifier = ">=1.22,<3" },
