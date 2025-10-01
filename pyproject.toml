@@ -33,7 +33,7 @@ dependencies = [
 optimake = "optimade_maker.cli:cli"
 
 [build-system]
-requires = ["setuptools >= 62", "setuptools_scm ~= 8.1", "wheel"]
+requires = ["setuptools >= 62", "setuptools_scm >= 8.1,< 10.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
@@ -47,7 +47,7 @@ pandas = ["pandas >= 1.5, < 3"]
 aiida = ["aiida-core >= 2.6.3"]
 core = ["optimade-maker[ase,pymatgen,pandas]"]
 ingest = ["optimade-maker[ase,pymatgen,pandas,aiida]"]
-tests = ["pytest~=8.3", "pytest-cov~=6.0"]
+tests = ["pytest~=8.3", "pytest-cov>=6,<8"]
 dev = ["ruff", "pre-commit", "mypy"]
 
 [tool.ruff]
