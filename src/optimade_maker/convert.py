@@ -42,6 +42,8 @@ def _construct_entry_type_info(
 
     info: dict[str, Any] = {"formats": ["json"], "description": type}
     info["properties"] = {}
+    info["type"] = "info"
+    info["id"] = type
     for p in properties:
         if isinstance(p, PropertyDefinition):
             p = p.model_dump()
