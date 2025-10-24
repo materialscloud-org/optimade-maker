@@ -53,6 +53,11 @@ def test_convert_example_archives(archive_path, tmp_path):
 
         # check that info endpoint equivalent exists as next line
         info = json.loads(fhandle.readline())
+
+        # Backwards compatibility for pre-1.2-created JSONL files
+        info["type"] = "info"
+        info["id"] = "/"
+
         assert EntryInfoResource(**info)
 
         # now check for entry lines:
