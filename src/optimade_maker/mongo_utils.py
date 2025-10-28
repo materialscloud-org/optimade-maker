@@ -81,8 +81,9 @@ def populate_mongodb_from_jsonl(
 
         # Insert any remaining data
         for entry_type in batch:
-            mongo_db[entry_type].insert_many(batch[entry_type])
-            batch[entry_type] = []
+            if batch[entry_type]:
+                mongo_db[entry_type].insert(batch[entry_type])
+                batch[entry_type] = []
 
         if bad_rows:
             LOGGER.info(f"Could not read {bad_rows} rows from the JSONL file")
