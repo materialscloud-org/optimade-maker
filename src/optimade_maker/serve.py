@@ -20,7 +20,6 @@ should be imported after config is determined, and before populating the db.
 import json
 import os
 import traceback
-import warnings
 from pathlib import Path
 from typing import Union
 
@@ -113,7 +112,7 @@ def get_provider_fields_from_jsonl(
                 try:
                     entry = bson.json_util.loads(json_str)
                 except json.JSONDecodeError:
-                    warnings.warn(f"Found bad JSONL line at L{line_no}")
+                    LOGGER.warning(f"Found bad JSONL line at L{line_no}")
                     continue
 
                 if "properties" in entry:
@@ -227,7 +226,12 @@ class OptimakeServer:
                     var,
                     os.environ[var],
                 )
-                config_dict[var.replace("OPTIMAKE_", "").lower()] = os.environ[var]
+                val = os.environ[var]
+                try:
+                    parsed = json.loads(val)
+                except Exception:
+                    parsed = val
+                config_dict[var.replace("OPTIMAKE_", "").lower()] = parsed
 
         # Override 2: override_config file/dict
         override_config_opts = self._get_override_config_options(override_config)
@@ -258,7 +262,7 @@ class OptimakeServer:
         db_name = self.optimade_config.get("mongo_database", "optimade")
         if db_backend == "mongodb":
             # External MongoDB backend
-            LOGGER.info("`Using an external MongoDB backend.")
+            LOGGER.info("Using an external MongoDB backend.")
             try:
                 import pymongo
             except ImportError:
@@ -299,8 +303,8 @@ class OptimakeServer:
             self.jsonl_path, mongo_db, replace_prefix=self.provider_prefix
         )
 
-    def start_api(self):
+    def start_api(self, **uvicorn_kwargs):
         # Importing optimade loads config (if not imported already before)
         from optimade.server.main import app
 
-        uvicorn.run(app, host=self.host, port=self.port)
+        uvicorn.run(app, host=self.host, port=self.port, **uvicorn_kwargs)
