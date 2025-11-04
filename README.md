@@ -24,9 +24,22 @@ This repository contains the src/optimade-maker Python package and the correspon
 - serving either an annotated data archive or a JSON Lines file as an OPTIMADE API (using the [`optimade-python-tools`](https://github.com/Materials-Consortia/optimade-python-tools/)
   reference server implementation).
 
-## Usage
+## Installation and usage
 
-See `./examples` for a more complete set of supported formats and corresponding `optimade.yaml` config files.
+Install with
+
+```bash
+pip install optimade-maker[ingest]
+```
+
+this will also make the `optimake` CLI utility available.
+
+For a folder containing the data archive and the `optimade.yaml` file (such as in `/examples`), run
+
+- `optimake convert .` to convert the entry into the JSONL format (see below).
+- `optimake serve .` to start the OPTIMADE API (this also converts the entry, if needed);
+
+For more detailed information see also `optimake --help`.
 
 ### Annotating with `optimade.yaml`
 
@@ -53,6 +66,8 @@ entries:
         type: float
 ```
 
+See `./examples` for a more complete set of supported formats and corresponding `optimade.yaml` config files.
+
 ### Structure `id`s and property files
 
 `optimade-maker` will assign an `id` for each structure based on its full path in the archive, following a simple deterministic rule: from the set of all archive paths, the maximum common path prefix and postfix (including file extensions) are removed. E.g.
@@ -72,40 +87,10 @@ set1/101,2.5
 structures.zip/cifs/set2/102.cif,3.2
 ```
 
-### Installing and running `optimake`
-
-Install with
-
-```bash
-pip install optimade-maker[ingest]
-```
-
-this will also make the `optimake` CLI utility available.
-
-For a folder containing the data archive and the `optimade.yaml` file (such as in `/examples`), run
-
-- `optimake convert .` to just convert the entry into the JSONL format (see below).
-- `optimake serve .` to start the OPTIMADE API (this also first converts the entry, if needed);
-
-For more detailed information see also `optimake --help`.
-
 ## Relevant links
 
 - [OPTIMADE specification](https://github.com/Materials-Consortia/OPTIMADE/blob/develop/optimade.rst)
 - [OPTIMADE specification: JSON Lines format](https://github.com/Materials-Consortia/OPTIMADE/blob/develop/optimade.rst#the-optimade-json-lines-format-for-database-exchange)
-
-## Contributors
-
-The initial prototype was created at the Paul Scherrer Institute, Switzerland, during the week of 12–16 June 2023.
-
-Authors (alphabetical):
-
-- Kristjan Eimre
-- Matthew Evans
-- Giovanni Pizzi
-- Gian-Marco Rignanese
-- Jusong Yu
-- Xing Wang
 
 ## For developers
 
