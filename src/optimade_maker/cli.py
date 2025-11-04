@@ -66,7 +66,7 @@ def convert(path, jsonl_path, limit=None, overwrite=False):
     help="The port to serve the API on.",
 )
 @click.option(
-    "--extra_config_file",
+    "--override_config_file",
     type=click.Path(),
     help="Custom configuration options in a JSON file.",
 )
@@ -92,7 +92,7 @@ def convert(path, jsonl_path, limit=None, overwrite=False):
     type=click.Path(),
 )
 def serve(
-    host, port, extra_config_file, write_config, drop_existing_db, prepare_only, path
+    host, port, override_config_file, write_config, drop_existing_db, prepare_only, path
 ):
     """
     Serve a raw data archive with an OPTIMADE API.
@@ -101,7 +101,7 @@ def serve(
     file at the top level. If needed, the data is first converted into an OPTIMADE JSONL
     file. However, if the JSONL file already exists, the API is started from it.
 
-    Use `--extra_config_file` or set `OPTIMADE_*` env variables to pass in additional
+    Use `--override_config_file` or set `OPTIMAKE_*` env variables to pass in additional
     configuration options such a custom provider or a real MongoDB backend.
 
     Use `--prepare_only` and `--write_config` to populate a MongoDB and write an optimade
@@ -117,8 +117,10 @@ def serve(
     else:
         LOGGER.info(f"{jsonl_file} already exists!")
 
+    if override_config_file:
+        override_config_file = Path(override_config_file)
     LOGGER.info("Preparing to start the API...")
-    optimake_server = OptimakeServer(path, host, port, extra_config_file)
+    optimake_server = OptimakeServer(path, host, port, override_config_file)
 
     if write_config is not None:
         write_config = Path(write_config)
