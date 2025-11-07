@@ -20,8 +20,8 @@ should be imported after config is determined, and before populating the db.
 import json
 import os
 import traceback
-import warnings
 from pathlib import Path
+from typing import Union
 
 import bson.json_util
 import uvicorn
@@ -112,7 +112,7 @@ def get_provider_fields_from_jsonl(
                 try:
                     entry = bson.json_util.loads(json_str)
                 except json.JSONDecodeError:
-                    warnings.warn(f"Found bad JSONL line at L{line_no}")
+                    LOGGER.warning(f"Found bad JSONL line at L{line_no}")
                     continue
 
                 if "properties" in entry:
@@ -143,7 +143,8 @@ def get_provider_fields_from_jsonl(
 class OptimakeServer:
     """
     Class to handle input parameters and configuration to start the optimade-python-tools API.
-    Uses the MongoMock backend.
+    By default, uses the MongoMock backend, but can be set up with a production MongoDB by
+    overriding the config.
     """
 
     def __init__(
@@ -151,16 +152,16 @@ class OptimakeServer:
         path: Path,
         host: str = "127.0.0.1",
         port: int = 5000,
-        extra_config_file: Path | None = None,
+        override_config: Path | dict | None = None,
     ):
         """Initialise the OptimakeServer instance.
 
         Parameters:
             path: Path to the directory containing the optimade.jsonl file.
+            host: Host domain.
             port: Port to run the API on.
-            extra_config_file: Additional optimade-python-tools configuration options to pass to the API.
-            write_final_config: Output the final config file.
-
+            override_config: Override configuration options to be passed to optimade-python-tools.
+                Can either be a json file or a dictionary.
         """
         self.path = path
         self.jsonl_path = self.path / "optimade.jsonl"
@@ -170,55 +171,83 @@ class OptimakeServer:
         if not self.path.exists():
             raise FileNotFoundError(f"Path {self.path} does not exist.")
 
-        self.extra_config_file = extra_config_file
-        if self.extra_config_file is not None:
-            self.extra_config_file = Path(self.extra_config_file)
-            if not self.extra_config_file.is_absolute():
-                # if relative path, assume it's w.r.t. the main folder
-                self.extra_config_file = self.path / self.extra_config_file
-            if not self.extra_config_file.exists():
-                raise FileNotFoundError(
-                    f"Path {self.extra_config_file} does not exist."
-                )
-
         self.provider_prefix = None
-        self.optimade_config = self.get_optimade_config()
+        self.optimade_config = self._get_optimade_config(override_config)
         set_config_env_variables(self.optimade_config)
 
-    def get_optimade_config(self):
+    def _get_override_config_options(
+        self,
+        override_config: Union[Path, dict, None],
+    ) -> dict:
+        """
+        Load configuration into a dictionary.
+
+        - If override_config is a dict, returns it as-is.
+        - If it's a Path, loads and returns JSON contents.
+        - If None, returns an empty dict.
+        """
+        if override_config is None:
+            return {}
+
+        if isinstance(override_config, dict):
+            return override_config
+
+        if isinstance(override_config, Path):
+            if not override_config.is_absolute():
+                # if relative path, assume it's w.r.t. the main folder
+                override_config = self.path / override_config
+            if not override_config.exists():
+                raise FileNotFoundError(f"Path {override_config} does not exist.")
+            with override_config.open("r", encoding="utf-8") as f:
+                return json.load(f)
+
+        raise TypeError(
+            f"Expected Path, dict, or None for override_config, "
+            f"got {type(override_config).__name__}"
+        )
+
+    def _get_optimade_config(
+        self,
+        override_config: Union[Path, dict, None],
+    ):
         # Default configuration options
         config_dict = {
             "debug": False,
             "insert_test_data": False,
             "base_url": f"http://{self.host}:{self.port}",
             "provider": get_default_provider_info(),
-            # "log_dir": ".",  # str(self.path.resolve()),
         }
 
-        # Update/override config options if any `OPTIMAKE_` env variables are set
-        for env in os.environ:
-            if env.startswith("OPTIMAKE_"):
+        # Override 1: env variables starting with OPTIMAKE_ (Note the "K"!)
+        for var in os.environ:
+            if var.startswith("OPTIMAKE_"):
                 LOGGER.debug(
                     "Reading environment variable %s into config with value %s",
-                    env,
-                    os.environ[env],
+                    var,
+                    os.environ[var],
                 )
-                config_dict[env.replace("OPTIMAKE_", "").lower()] = os.environ[env]
+                val = os.environ[var]
+                try:
+                    parsed = json.loads(val)
+                except Exception:
+                    parsed = val
+                config_dict[var.replace("OPTIMAKE_", "").lower()] = parsed
 
-        # Update/override config options if the extra_config_file is provided
-        if self.extra_config_file:
-            with open(self.extra_config_file, "r") as f:
-                extra_config = json.load(f)
-            config_dict.update(extra_config)
+        # Override 2: override_config file/dict
+        override_config_opts = self._get_override_config_options(override_config)
+        config_dict.update(override_config_opts)
 
         self.provider_prefix = config_dict.get("provider", {}).get("prefix")
 
-        # replace the provider prefix in the provider fields
-        provider_fields = get_provider_fields_from_jsonl(
-            self.jsonl_path, replace_prefix=self.provider_prefix
-        )
-
-        config_dict["provider_fields"] = provider_fields
+        if "provider_fields" in config_dict:
+            LOGGER.warning(
+                "provider_fields set by an override. Ignoring the ones in JSONL."
+            )
+        else:
+            provider_fields = get_provider_fields_from_jsonl(
+                self.jsonl_path, replace_prefix=self.provider_prefix
+            )
+            config_dict["provider_fields"] = provider_fields
 
         LOGGER.debug(f"CONFIG: {json.dumps(config_dict, indent=2)}")
 
@@ -233,7 +262,7 @@ class OptimakeServer:
         db_name = self.optimade_config.get("mongo_database", "optimade")
         if db_backend == "mongodb":
             # External MongoDB backend
-            LOGGER.info("`Using an external MongoDB backend.")
+            LOGGER.info("Using an external MongoDB backend.")
             try:
                 import pymongo
             except ImportError:
@@ -274,8 +303,8 @@ class OptimakeServer:
             self.jsonl_path, mongo_db, replace_prefix=self.provider_prefix
         )
 
-    def start_api(self):
+    def start_api(self, **uvicorn_kwargs):
         # Importing optimade loads config (if not imported already before)
         from optimade.server.main import app
 
-        uvicorn.run(app, host=self.host, port=self.port)
+        uvicorn.run(app, host=self.host, port=self.port, **uvicorn_kwargs)

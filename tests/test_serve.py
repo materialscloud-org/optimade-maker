@@ -37,14 +37,14 @@ def test_serve_example_archives(archive_path, tmp_path):
     tmp_path = tmp_path / archive_path.name
     shutil.copytree(archive_path, tmp_path)
 
-    extra_config_file = "extra_config.json"
-    extra_config = None
-    if (tmp_path / extra_config_file).is_file():
-        with open(tmp_path / extra_config_file, "r") as f:
-            extra_config = json.load(f)
+    override_config_file = "override_config.json"
+    override_config = None
+    if (tmp_path / override_config_file).is_file():
+        with open(tmp_path / override_config_file, "r") as f:
+            override_config = json.load(f)
     custom_prefix = None
-    if extra_config is not None:
-        custom_prefix = extra_config.get("provider", {}).get("prefix")
+    if override_config is not None:
+        custom_prefix = override_config.get("provider", {}).get("prefix")
 
     # use an uncommon port that hopefully is unused
     port = 43486
@@ -61,8 +61,8 @@ def test_serve_example_archives(archive_path, tmp_path):
         "--write_config",
         "final_config.json",
     ]
-    if extra_config is not None:
-        command += ["--extra_config_file", extra_config_file]
+    if override_config is not None:
+        command += ["--override_config_file", override_config_file]
     command += [str(tmp_path)]
     process = subprocess.Popen(command)
 
