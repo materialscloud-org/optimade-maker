@@ -47,7 +47,7 @@ pandas = ["pandas >= 1.5, < 3"]
 aiida = ["aiida-core >= 2.6.3"]
 core = ["optimade-maker[ase,pymatgen,pandas]"]
 ingest = ["optimade-maker[ase,pymatgen,pandas,aiida]"]
-tests = ["pytest~=8.3", "pytest-cov~=6.0"]
+tests = ["pytest~=8.3", "pytest-cov>=6,<8"]
 dev = ["ruff", "pre-commit", "mypy"]
 
 [tool.ruff]
