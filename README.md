@@ -106,3 +106,8 @@ git push --tags
 ```
 
 This will trigger the Github Action that will create 1) a Github release; and 2) build and publish the package on pypi.
+
+## Acknowledgements
+
+This project was funded by the NCCR MARVEL, a National Centre of Competence in Research, funded by the Swiss National Science Foundation (grant number 205602).
+We also acknowledge support by the Open Research Data Program of the Swiss ETH Board (project "API-03 IntER").
