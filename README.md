@@ -43,7 +43,7 @@ For more detailed information see also `optimake --help`.
 
 ### Annotating with `optimade.yaml`
 
-To annotate your structural data for `optimade-maker`, the data archive needs to be accompanied by an `optimade.yaml` config file. The following is a simple example for a zip archive (`structures.zip`) of cif files together with an optional property file (`data.csv`):
+To annotate your structural data for `optimade-maker`, the data archive needs to be accompanied by an `optimade.yaml` config file. The following is a simple example for a zip archive (`structures.zip`) of cif files together with an optional property file (`properties.csv`):
 
 ```yaml
 config_version: 0.1.1
@@ -57,7 +57,7 @@ entries:
           - cifs/*/*.cif
     # (optional) property file and definitions:
     property_paths:
-      - file: data.csv
+      - file: properties.csv
     property_definitions:
       - name: energy
         title: Total energy per atom
