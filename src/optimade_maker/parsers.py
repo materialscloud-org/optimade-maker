@@ -102,7 +102,6 @@ def load_json_file(
         A dictionary of ID -> properties.
     """
 
-    print("reading json file.")
 
     with open(p, "r") as f:
         data = json.load(f)  # expects a list of objects or dict keyed by ID
