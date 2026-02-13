@@ -83,6 +83,7 @@ def load_csv_file(
 
     return df.to_dict(orient="index")
 
+
 def load_json_file(
     p: Path,
     properties: list[PropertyDefinition] | None = None,
@@ -101,7 +102,6 @@ def load_json_file(
     Returns:
         A dictionary of ID -> properties.
     """
-
 
     with open(p, "r") as f:
         data = json.load(f)  # expects a list of objects or dict keyed by ID
@@ -137,12 +137,10 @@ def load_json_file(
 
     return data
 
+
 PROPERTY_PARSERS: dict[
     str, list[Callable[[Path, list[PropertyDefinition] | None], Any]]
-] = {
-    ".csv": [load_csv_file],
-    ".json": [load_json_file]
-}
+] = {".csv": [load_csv_file], ".json": [load_json_file]}
 
 TYPE_MAP: dict[DataType, type] = {
     DataType.FLOAT: float,
