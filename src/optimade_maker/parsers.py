@@ -83,11 +83,66 @@ def load_csv_file(
 
     return df.to_dict(orient="index")
 
+def load_json_file(
+    p: Path,
+    properties: list[PropertyDefinition] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Parses a JSON file found at path `p` and returns a dictionary
+    of properties keyed by ID.
+
+    Expects either a list of objects (each with an "id" field) or a dictionary
+    already keyed by IDs. If a list is provided, the "id" field of each object
+    will be used as the dictionary key.
+
+    Parameters:
+        p: Path to the JSON file.
+        properties: List of property definitions to extract from the JSON data.
+
+    Returns:
+        A dictionary of ID -> properties.
+    """
+
+    print("reading json file.")
+
+    with open(p, "r") as f:
+        data = json.load(f)  # expects a list of objects or dict keyed by ID
+
+    # If it's a list of objects, use 'id' field as key
+    if isinstance(data, list):
+        data_dict = {}
+        for item in data:
+            id_value = item.get("id")
+            if not id_value:
+                raise RuntimeError(f"JSON item {item} missing 'id'")
+            data_dict[id_value] = item
+        data = data_dict
+
+    # Handle property aliases just like CSV
+    for prop in properties or []:
+        for alias in prop.aliases or []:
+            for row_id, row in data.items():
+                if alias in row:
+                    row[prop.name] = row.pop(alias)
+                    break
+
+    # Handle list-type properties
+    for prop in properties or []:
+        if prop.type == DataType.LIST:
+            for row in data.values():
+                if prop.name in row:
+                    if isinstance(row[prop.name], str):
+                        try:
+                            row[prop.name] = json.loads(row[prop.name])
+                        except Exception:
+                            row[prop.name] = None  # or leave as string
+
+    return data
 
 PROPERTY_PARSERS: dict[
     str, list[Callable[[Path, list[PropertyDefinition] | None], Any]]
 ] = {
     ".csv": [load_csv_file],
+    ".json": [load_json_file]
 }
 
 TYPE_MAP: dict[DataType, type] = {
