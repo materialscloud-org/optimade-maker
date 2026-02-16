@@ -573,7 +573,7 @@ def construct_entries_from_files(
             try:
                 entry = converter(
                     entry,
-                    properties=entry_config.property_definitions,
+                    prop_defs=entry_config.property_definitions,
                     prefix=provider_prefix,
                 )  # type: ignore[call-arg]
                 if not isinstance(entry, dict):

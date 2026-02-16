@@ -24,7 +24,7 @@ from optimade_maker.config import PropertyDefinition
 
 def load_csv_file(
     p: Path,
-    properties: list[PropertyDefinition] | None = None,
+    prop_defs: list[PropertyDefinition] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Parses a CSV file found at path `p` and returns a dictionary
     of properties keyed by ID.
@@ -34,7 +34,7 @@ def load_csv_file(
 
     Parameters:
         p: Path to the CSV file.
-        properties: List of property definitions to extract from the CSV file.
+        prop_defs: List of property definitions to extract from the CSV file.
 
     Returns:
         A dictionary of ID -> properties.
@@ -55,38 +55,41 @@ def load_csv_file(
         df["id"] = df[id_key]
     df = df.set_index("id")
 
-    for prop in properties or []:
+    for prop_def in prop_defs or []:
         # loop through any property aliases, saving the value if found and only checking
         # the real name if not
-        for alias in prop.aliases or []:
+        for alias in prop_def.aliases or []:
             if alias in df:
-                df[prop.name] = df[alias]
+                df[prop_def.name] = df[alias]
                 df.drop(columns=[alias], inplace=True)
                 break
 
-    # Check for list/array-valued properties, being careful
-    # to reinterpret NaNs back into JSON `null` before trying
-    for prop in properties or []:
-        if prop.type == DataType.LIST:
+    # For list and dict types, interpret string values as JSON
+    for prop_def in prop_defs or []:
+        if (
+            prop_def.type in (DataType.LIST, DataType.DICTIONARY)
+            and prop_def.name in df.columns
+        ):
+            # Replace NaN -> "null"
+            df[prop_def.name] = (
+                df[prop_def.name].fillna(np.nan).replace({np.nan: "null"})
+            )
             try:
-                df[prop.name] = (
-                    df[prop.name]
-                    .fillna(np.nan)
-                    .replace([np.nan], ["null"])
-                    .apply(json.loads)
+                df[prop_def.name] = df[prop_def.name].apply(
+                    lambda v: json.loads(v) if isinstance(v, str) else v
                 )
             except Exception as exc:
                 warnings.warn(
-                    f"Tried to interpret property {prop.name!r} as a list, but an error was raised: {exc.__class__.__name__}: {exc!r}"
+                    f"Tried to interpret property {prop_def.name!r} as JSON, but got "
+                    f"{exc.__class__.__name__}: {exc!r}"
                 )
-                pass
 
     return df.to_dict(orient="index")
 
 
 def load_json_file(
     p: Path,
-    properties: list[PropertyDefinition] | None = None,
+    prop_defs: list[PropertyDefinition] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Parses a JSON file found at path `p` and returns a dictionary
     of properties keyed by ID.
@@ -97,16 +100,15 @@ def load_json_file(
 
     Parameters:
         p: Path to the JSON file.
-        properties: List of property definitions to extract from the JSON data.
+        prop_defs: List of property definitions to extract from the JSON data.
 
     Returns:
         A dictionary of ID -> properties.
     """
 
     with open(p, "r") as f:
-        data = json.load(f)  # expects a list of objects or dict keyed by ID
+        data = json.load(f)
 
-    # If it's a list of objects, use 'id' field as key
     if isinstance(data, list):
         data_dict = {}
         for item in data:
@@ -116,24 +118,11 @@ def load_json_file(
             data_dict[id_value] = item
         data = data_dict
 
-    # Handle property aliases just like CSV
-    for prop in properties or []:
-        for alias in prop.aliases or []:
+    for prop_def in prop_defs or []:
+        for alias in prop_def.aliases or []:
             for row_id, row in data.items():
                 if alias in row:
-                    row[prop.name] = row.pop(alias)
-                    break
-
-    # Handle list-type properties
-    for prop in properties or []:
-        if prop.type == DataType.LIST:
-            for row in data.values():
-                if prop.name in row:
-                    if isinstance(row[prop.name], str):
-                        try:
-                            row[prop.name] = json.loads(row[prop.name])
-                        except Exception:
-                            row[prop.name] = None  # or leave as string
+                    row[prop_def.name] = row.pop(alias)
 
     return data
 
@@ -198,7 +187,7 @@ ENTRY_PARSERS: dict[str, list[Callable[[Path], Any]]] = {
 
 def convert_pymatgen_computed_structure_entry(
     pmg_entry: ComputedStructureEntry,
-    properties: list[PropertyDefinition] | None = None,
+    prop_defs: list[PropertyDefinition] | None = None,
     prefix: str | None = None,
 ) -> dict:
     """Convert a pymatgen ComputedStructureEntry to an OPTIMADE EntryResource."""
@@ -211,7 +200,7 @@ def convert_pymatgen_computed_structure_entry(
             entry["id"] = id
             break
 
-    for p in properties or []:
+    for p in prop_defs or []:
         # loop through any property aliases, saving the value if found and only checking
         # the real name if not
         for alias in p.aliases or []:
@@ -224,7 +213,7 @@ def convert_pymatgen_computed_structure_entry(
     return entry
 
 
-def structure_ingest_wrapper(entry, properties=None, prefix=None):  # type: ignore
+def structure_ingest_wrapper(entry, prop_defs=None, prefix=None):  # type: ignore
     return Structure.ingest_from(entry)
 
 
