@@ -1,0 +1,18 @@
+{
+  "set1/101": {
+    "json_float_alias2": 2.5,
+    "json_list": [[1, 2.0, 3]],
+    "json_nested_dict": {
+      "a": 1,
+      "b": {
+        "c": 2,
+        "d": [1, 2, 3]
+      }
+    }
+  },
+  "structures.zip/cifs/set2/102.cif": {
+    "json_float_alias3": 3.2,
+    "json_list": null,
+    "json_nested_dict": null
+  }
+}

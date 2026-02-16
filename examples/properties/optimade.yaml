@@ -1,0 +1,45 @@
+config_version: 0.1.1
+database_description: Simple database
+
+entries:
+  - entry_type: structures
+    entry_paths:
+      - file: structures.zip
+        matches:
+          - cifs/*/*.cif
+    # (optional) property file and definitions:
+    property_paths:
+      - file: prop1.csv
+      - file: prop2.json
+    property_definitions:
+      # properties in the csv file
+      - name: energy
+        title: Total energy per atom
+        description: The total energy per atom as computed by DFT
+        unit: eV/atom
+        type: float
+      - name: list_property
+        title: List property
+        description: A 3x3 matrix property
+        type: list
+      - name: dict_property
+        title: Dictionary property
+        description: A dictionary property
+        type: dictionary
+      # properties in the json file
+      - name: json_float
+        title: JSON float property
+        description: A JSON float property
+        type: float
+        aliases:
+          - json_float_alias1
+          - json_float_alias2
+          - json_float_alias3
+      - name: json_list
+        title: JSON list property
+        description: A JSON list property
+        type: list
+      - name: json_nested_dict
+        title: JSON nested dictionary property
+        description: A nested dictionary property in JSON format
+        type: dictionary
