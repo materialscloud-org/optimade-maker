@@ -287,11 +287,12 @@ class OptimakeServer:
             LOGGER.info("Using the MongoMock backend.")
             if skip_mock:
                 return
-            # Importing optimade python tools loads the config and creates the mongomock
-            # client that we need to populate.
-            from optimade.server.entry_collections.mongo import CLIENT
+            # Get the MongoMock client from optimade-python-tools
+            from optimade.server.config import ServerConfig
+            from optimade.server.entry_collections.mongo import get_mongo_client
 
-            mongo_db = CLIENT[db_name]
+            client = get_mongo_client(ServerConfig())
+            mongo_db = client[db_name]
         else:
             raise ValueError(
                 f"Unknown database backend '{db_backend}'. "
