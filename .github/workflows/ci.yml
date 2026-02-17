@@ -65,7 +65,7 @@ jobs:
 
       - name: Install the minimum environment with testing
         run: |
-          uv sync --locked --dev
+          uv sync --locked --extra dev
 
       - name: Run tests
         run: |
