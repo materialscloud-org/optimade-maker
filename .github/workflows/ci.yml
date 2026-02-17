@@ -63,21 +63,21 @@ jobs:
           version: "0.8.x"
           enable-cache: true
 
-      - name: Install latest compatible versions of immediate dependencies
+      - name: Install the minimum environment with testing
         run: |
-          uv sync --locked --all-extras --dev
+          uv sync --locked --dev
 
       - name: Run tests
         run: |
           uv run pytest -vv --cov=./src/optimade_maker --cov-report=xml --cov-report=term ./tests
 
-      - name: Reinstall environment without aiida
+      - name: Reinstall the full environment with all extras
         run: |
-          uv sync --locked --extra core --extra tests
+          uv sync --locked --all-extras --dev
 
-      - name: Rerun tests without aiida
+      - name: Rerun tests
         run: |
-          uv run pytest -vv --cov=./src/optimade_maker --cov-report=xml --cov-report=term ./tests --ignore=./tests/aiida
+          uv run pytest -vv --cov=./src/optimade_maker --cov-report=xml --cov-report=term ./tests
 
       - name: Upload coverage
         uses: codecov/codecov-action@v3
