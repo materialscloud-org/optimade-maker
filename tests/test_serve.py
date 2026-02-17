@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import shutil
+import socket
 import subprocess
 import time
 from pathlib import Path
@@ -13,7 +14,13 @@ AIIDA_AVAILABLE = bool(importlib.util.find_spec("aiida"))
 EXAMPLE_ARCHIVES = (Path(__file__).parent.parent / "examples").glob("*")
 
 
-def wait_for_server_to_start(url, retries=20, delay=1):
+def _get_free_port(host: str) -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((host, 0))
+        return s.getsockname()[1]
+
+
+def wait_for_server_to_start(url, retries=10, delay=1):
     for _ in range(retries):
         try:
             response = requests.get(url)
@@ -46,11 +53,9 @@ def test_serve_example_archives(archive_path, tmp_path):
     if override_config is not None:
         custom_prefix = override_config.get("provider", {}).get("prefix")
 
-    # use an uncommon port that hopefully is unused
-    port = 43486
     host = "127.0.0.1"
+    port = _get_free_port(host)
 
-    # use subprocess to start the api via the cli
     command = [
         "optimake",
         "serve",
