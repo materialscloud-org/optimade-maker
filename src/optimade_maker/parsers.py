@@ -3,19 +3,8 @@ import warnings
 from pathlib import Path
 from typing import Any, Callable
 
-import numpy as np
-
-try:
-    import ase.io
-    import pandas
-    import pymatgen.core
-    import pymatgen.entries.computed_entries
-    from pymatgen.entries.computed_entries import ComputedStructureEntry
-except ImportError as exc:
-    raise ImportError(
-        "The parsers module requires the `ingest` extra of this package to be installed."
-    ) from exc
-
+import ase.io
+import pandas
 from optimade.adapters import Structure
 from optimade.models import DataType, EntryResource
 
@@ -71,9 +60,7 @@ def load_csv_file(
             and prop_def.name in df.columns
         ):
             # Replace NaN -> "null"
-            df[prop_def.name] = (
-                df[prop_def.name].fillna(np.nan).replace({np.nan: "null"})
-            )
+            df[prop_def.name] = df[prop_def.name].fillna("null")
             try:
                 df[prop_def.name] = df[prop_def.name].apply(
                     lambda v: json.loads(v) if isinstance(v, str) else v
@@ -139,6 +126,29 @@ TYPE_MAP: dict[DataType, type] = {
 }
 
 
+ENTRY_PARSERS: dict[str, list[Callable[[Path], Any]]] = {
+    "structures": [ase.io.read],
+}
+
+
+def structure_ingest_wrapper(entry, prop_defs=None, prefix=None):  # type: ignore
+    return Structure.ingest_from(entry)
+
+
+OPTIMADE_CONVERTERS: dict[
+    str,
+    list[
+        Callable[
+            [Any, list[PropertyDefinition] | None, str | None], EntryResource | dict
+        ]
+    ],
+] = {
+    "structures": [structure_ingest_wrapper],
+}
+
+#### Wrappers for third-party parsers and converters, such as pymatgen ####
+
+
 def wrapped_json_parser(parser):
     """This wrapper allows `from_dict` parser functions to be called
     on a single JSON file.
@@ -174,19 +184,8 @@ def wrapped_json_parser(parser):
     return _wrapped_json_parser
 
 
-ENTRY_PARSERS: dict[str, list[Callable[[Path], Any]]] = {
-    "structures": [
-        ase.io.read,
-        wrapped_json_parser(
-            pymatgen.entries.computed_entries.ComputedStructureEntry.from_dict
-        ),
-        wrapped_json_parser(pymatgen.core.Structure.from_dict),
-    ],
-}
-
-
 def convert_pymatgen_computed_structure_entry(
-    pmg_entry: ComputedStructureEntry,
+    pmg_entry,
     prop_defs: list[PropertyDefinition] | None = None,
     prefix: str | None = None,
 ) -> dict:
@@ -213,17 +212,28 @@ def convert_pymatgen_computed_structure_entry(
     return entry
 
 
-def structure_ingest_wrapper(entry, prop_defs=None, prefix=None):  # type: ignore
-    return Structure.ingest_from(entry)
+def add_pymatgen_parsers():
+    try:
+        import pymatgen.core
+        import pymatgen.entries.computed_entries
+
+        ENTRY_PARSERS["structures"].extend(
+            [
+                wrapped_json_parser(
+                    pymatgen.entries.computed_entries.ComputedStructureEntry.from_dict
+                ),
+                wrapped_json_parser(pymatgen.core.Structure.from_dict),
+            ]
+        )
+
+        OPTIMADE_CONVERTERS["structures"].append(
+            convert_pymatgen_computed_structure_entry
+        )
+    except ImportError:
+        warnings.warn(
+            "pymatgen is not installed, so corresponding parsers and converters will not be available. "
+            "To use these, install the 'pymatgen' extra."
+        )
 
 
-OPTIMADE_CONVERTERS: dict[
-    str,
-    list[
-        Callable[
-            [Any, list[PropertyDefinition] | None, str | None], EntryResource | dict
-        ]
-    ],
-] = {
-    "structures": [structure_ingest_wrapper, convert_pymatgen_computed_structure_entry],
-}
+add_pymatgen_parsers()

@@ -19,14 +19,15 @@ classifiers = [
 ]
 
 dependencies = [
-  "pydantic~=2.2",
-  "optimade[server]~=1.4.1",
-  "pymongo",
+  "pydantic>=2,<3",
+  "optimade[server]~=1.4",
+  "pymongo>=4,<5",
   "pyyaml~=6.0",
   "tqdm~=4.65",
   "requests~=2.31",
-  "numpy >= 1.22, < 3",
   "click~=8.1",
+  "pandas>=1.5,<3",
+  "ase~=3.22",
 ]
 
 [project.scripts]
@@ -41,14 +42,11 @@ fallback_version = "0.1.0"
 version_scheme = "post-release"
 
 [project.optional-dependencies]
-ase = ["ase ~= 3.22"]
 pymatgen = ["pymatgen >= 2023.9"]
-pandas = ["pandas >= 1.5, < 3"]
-aiida = ["aiida-core >= 2.6.3"]
-core = ["optimade-maker[ase,pymatgen,pandas]"]
-ingest = ["optimade-maker[ase,pymatgen,pandas,aiida]"]
-tests = ["pytest~=8.3", "pytest-cov~=6.0"]
-dev = ["ruff", "pre-commit", "mypy"]
+aiida = ["aiida-core ~= 2.6"]
+ingest = ["optimade-maker[pymatgen,aiida]"]
+tests = ["pytest~=8.3", "pytest-cov~=6.0", "numpy >= 1.22, < 3"]
+dev = ["optimade-maker[tests]", "ruff", "pre-commit", "mypy"]
 
 [tool.ruff]
 target-version = "py311"

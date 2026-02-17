@@ -29,6 +29,8 @@ This repository contains the src/optimade-maker Python package and the correspon
 Install with
 
 ```bash
+pip install optimade-maker
+# or to get all extra plugins (e.g. pymatgen, aiida):
 pip install optimade-maker[ingest]
 ```
 

@@ -306,11 +306,11 @@ def _parse_entries(
                         entry_ids.append(id_root)
                     break
                 except Exception as exc:
-                    exceptions[parser] = exc
+                    exceptions[parser.__name__] = exc
                     continue
             else:
                 raise RuntimeError(
-                    f"None of the provided parsers {ENTRY_PARSERS[entry_type]} could parse {_path}. Errors: {exceptions}"
+                    f"None of the provided parsers could parse {_path}. Errors: {exceptions}"
                 )
 
     if len(set(entry_ids)) != len(entry_ids):
