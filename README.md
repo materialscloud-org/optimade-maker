@@ -29,6 +29,8 @@ This repository contains the src/optimade-maker Python package and the correspon
 Install with
 
 ```bash
+pip install optimade-maker
+# or to get all ingestion plugins (e.g. pymatgen, aiida):
 pip install optimade-maker[ingest]
 ```
 
@@ -60,8 +62,8 @@ entries:
       - file: properties.csv
     property_definitions:
       - name: energy
-        title: Total energy per atom
-        description: DFT total energy per atom
+        title: Total energy
+        description: DFT total energy
         unit: eV/atom
         type: float
 ```

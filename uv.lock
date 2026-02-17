@@ -1391,9 +1391,10 @@ server = [
 name = "optimade-maker"
 source = { editable = "." }
 dependencies = [
+    { name = "ase" },
     { name = "click" },
-    { name = "numpy" },
     { name = "optimade", extra = ["server"] },
+    { name = "pandas" },
     { name = "pydantic" },
     { name = "pymongo" },
     { name = "pyyaml" },
@@ -1405,51 +1406,42 @@ dependencies = [
 aiida = [
     { name = "aiida-core" },
 ]
-ase = [
-    { name = "ase" },
-]
-core = [
-    { name = "ase" },
-    { name = "pandas" },
-    { name = "pymatgen" },
-]
 dev = [
     { name = "mypy" },
+    { name = "numpy" },
     { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
     { name = "ruff" },
 ]
 ingest = [
     { name = "aiida-core" },
-    { name = "ase" },
-    { name = "pandas" },
     { name = "pymatgen" },
-]
-pandas = [
-    { name = "pandas" },
 ]
 pymatgen = [
     { name = "pymatgen" },
 ]
 tests = [
+    { name = "numpy" },
     { name = "pytest" },
     { name = "pytest-cov" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aiida-core", marker = "extra == 'aiida'", specifier = ">=2.6.3" },
-    { name = "ase", marker = "extra == 'ase'", specifier = "~=3.22" },
+    { name = "aiida-core", marker = "extra == 'aiida'", specifier = "~=2.6" },
+    { name = "ase", specifier = "~=3.22" },
     { name = "click", specifier = "~=8.1" },
     { name = "mypy", marker = "extra == 'dev'" },
-    { name = "numpy", specifier = ">=1.22,<3" },
-    { name = "optimade", extras = ["server"], specifier = "~=1.4.1" },
-    { name = "optimade-maker", extras = ["aiida", "ase", "pandas", "pymatgen"], marker = "extra == 'ingest'" },
-    { name = "optimade-maker", extras = ["ase", "pandas", "pymatgen"], marker = "extra == 'core'" },
-    { name = "pandas", marker = "extra == 'pandas'", specifier = ">=1.5,<3" },
+    { name = "numpy", marker = "extra == 'tests'", specifier = ">=1.22,<3" },
+    { name = "optimade", extras = ["server"], specifier = "~=1.4" },
+    { name = "optimade-maker", extras = ["aiida", "pymatgen"], marker = "extra == 'ingest'" },
+    { name = "optimade-maker", extras = ["tests"], marker = "extra == 'dev'" },
+    { name = "pandas", specifier = ">=1.5,<3" },
     { name = "pre-commit", marker = "extra == 'dev'" },
-    { name = "pydantic", specifier = "~=2.2" },
+    { name = "pydantic", specifier = ">=2,<3" },
     { name = "pymatgen", marker = "extra == 'pymatgen'", specifier = ">=2023.9" },
-    { name = "pymongo" },
+    { name = "pymongo", specifier = ">=4,<5" },
     { name = "pytest", marker = "extra == 'tests'", specifier = "~=8.3" },
     { name = "pytest-cov", marker = "extra == 'tests'", specifier = "~=6.0" },
     { name = "pyyaml", specifier = "~=6.0" },
@@ -1457,7 +1449,7 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "tqdm", specifier = "~=4.65" },
 ]
-provides-extras = ["ase", "pymatgen", "pandas", "aiida", "core", "ingest", "tests", "dev"]
+provides-extras = ["pymatgen", "aiida", "ingest", "tests", "dev"]
 
 [[package]]
 name = "orjson"

@@ -10,6 +10,7 @@ import pytest
 import requests
 
 AIIDA_AVAILABLE = bool(importlib.util.find_spec("aiida"))
+PYMATGEN_AVAILABLE = bool(importlib.util.find_spec("pymatgen"))
 
 EXAMPLE_ARCHIVES = (Path(__file__).parent.parent / "examples").glob("*")
 
@@ -39,6 +40,10 @@ def test_serve_example_archives(archive_path, tmp_path):
     if "aiida" in archive_path.name and not AIIDA_AVAILABLE:
         pytest.skip(
             "Skipping test for AiiDA archive, as it requires AiiDA to be installed."
+        )
+    if "pymatgen" in archive_path.name and not PYMATGEN_AVAILABLE:
+        pytest.skip(
+            "Skipping test for pymatgen archive, as it requires pymatgen to be installed."
         )
     # copy example into temporary path
     tmp_path = tmp_path / archive_path.name

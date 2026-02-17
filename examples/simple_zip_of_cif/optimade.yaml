@@ -12,7 +12,7 @@ entries:
       - file: properties.csv
     property_definitions:
       - name: energy
-        title: Total energy per atom
-        description: The total energy per atom as computed by DFT
+        title: Total energy
+        description: DFT total energy
         unit: eV/atom
         type: float
