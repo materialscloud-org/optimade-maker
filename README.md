@@ -30,7 +30,7 @@ Install with
 
 ```bash
 pip install optimade-maker
-# or to get all extra plugins (e.g. pymatgen, aiida):
+# or to get all ingestion plugins (e.g. pymatgen, aiida):
 pip install optimade-maker[ingest]
 ```
 
