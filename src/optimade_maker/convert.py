@@ -173,7 +173,7 @@ def inflate_archive(archive_path: Path, data_path: Path) -> None:
     # If .tar in filename suffixes, use `tarfile`'s compression detection
     elif ".tar" in real_path.suffixes:
         with tarfile.open(real_path, "r") as tar:
-            tar.extractall(path=real_path.parent)
+            tar.extractall(path=real_path.parent, filter="data")
 
     # Otherwise assume this is a single compressed file
     # Decompress it and write it using the appropriate
