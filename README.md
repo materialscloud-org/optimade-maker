@@ -11,6 +11,7 @@
 [![PyPI - Version](https://img.shields.io/pypi/v/optimade-maker?color=4CC61E)](https://pypi.org/project/optimade-maker/)
 ![PyPI - License](https://img.shields.io/pypi/l/optimade-maker?color=blue)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/materialscloud-org/optimade-maker/ci.yml)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18863676.svg)](https://doi.org/10.5281/zenodo.18863676)
 
 </div>
 
