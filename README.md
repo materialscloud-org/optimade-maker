@@ -50,7 +50,7 @@ To annotate your structural data for `optimade-maker`, the data archive needs to
 
 ```yaml
 config_version: 0.1.1
-database_description: Simple database
+database_description: Simple DB
 
 entries:
   - entry_type: structures
@@ -58,7 +58,7 @@ entries:
       - file: structures.zip
         matches:
           - cifs/*/*.cif
-    # (optional) property file and definitions:
+    # (optional) properties:
     property_paths:
       - file: properties.csv
     property_definitions:
@@ -89,6 +89,10 @@ id,energy
 set1/101,2.5
 structures.zip/cifs/set2/102.cif,3.2
 ```
+
+### Usage in a custom data pipeline
+
+The toolkit supports a custom data pipeline (e.g. with an external MongoDB), by allowing to override any of the configuration passed to `optimade-python-tools`. See `./examples/override_config` for details.
 
 ## Relevant links
 

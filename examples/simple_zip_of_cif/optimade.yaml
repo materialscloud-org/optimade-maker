@@ -1,5 +1,5 @@
-config_version: 0.1.0
-database_description: Simple database
+config_version: 0.1.1
+database_description: Simple DB
 
 entries:
   - entry_type: structures
@@ -7,7 +7,7 @@ entries:
       - file: structures.zip
         matches:
           - cifs/*/*.cif
-    # (optional) property file and definitions:
+    # (optional) properties:
     property_paths:
       - file: properties.csv
     property_definitions:
