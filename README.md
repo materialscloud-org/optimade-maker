@@ -55,12 +55,12 @@ database_description: Simple DB
 entries:
   - entry_type: structures
     entry_paths:
-      - file: structures.zip
+      - path: structures.zip
         matches:
           - cifs/*/*.cif
     # (optional) properties:
     property_paths:
-      - file: properties.csv
+      - path: properties.csv
     property_definitions:
       - name: energy
         title: Total energy
