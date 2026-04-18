@@ -1,16 +1,16 @@
-config_version: 0.1.1
+config_version: 0.2.0
 database_description: Simple database
 
 entries:
   - entry_type: structures
     entry_paths:
-      - file: structures.zip
+      - path: structures.zip
         matches:
           - cifs/*/*.cif
     # (optional) property file and definitions:
     property_paths:
-      - file: prop1.csv
-      - file: prop2.json
+      - path: prop1.csv
+      - path: prop2.json
     property_definitions:
       # properties in the csv file
       - name: energy

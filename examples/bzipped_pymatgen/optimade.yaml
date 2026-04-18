@@ -1,4 +1,4 @@
-config_version: 0.1.0
+config_version: 0.2.0
 
 database_description: >-
   This database contains some bzipped pymatgen objects.
@@ -6,7 +6,7 @@ database_description: >-
 entries:
   - entry_type: structures
     entry_paths:
-      - file: part_1.json.bz2
+      - path: part_1.json.bz2
         matches:
           - part_1.json
     property_definitions:

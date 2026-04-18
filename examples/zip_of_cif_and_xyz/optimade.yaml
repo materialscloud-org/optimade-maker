@@ -1,4 +1,4 @@
-config_version: 0.1.0
+config_version: 0.2.0
 
 database_description: >-
   Example database.
@@ -6,7 +6,7 @@ database_description: >-
 entries:
   - entry_type: structures
     entry_paths:
-      - file: structures.zip
+      - path: structures.zip
         matches:
           - structures/set1/*.cif
           - structures/set2/*.cif

@@ -1,4 +1,4 @@
-config_version: 0.1.1
+config_version: 0.2.0
 
 database_description: >-
   This example aiida database contains optimized structures and band structure calculations.
@@ -13,7 +13,7 @@ entries:
       # If all properties are stored in the AiiDA database,
       # this can be omitted. But additional properties can be
       # provided via a csv file.
-      - file: data.csv
+      - path: data.csv
     property_definitions:
       # ----
       - name: test_extra

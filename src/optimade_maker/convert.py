@@ -66,8 +66,29 @@ def _construct_entry_type_info(
     return EntryInfoResource(**info)
 
 
+def _needs_inflation(path: Path) -> bool:
+    """Return whether `path` looks like an archive that should be inflated."""
+    if not path.exists():
+        raise FileNotFoundError(f"Input path does not exist: {path}")
+
+    if path.is_dir():
+        return False
+
+    if path.suffix == ".zip":
+        return True
+
+    suffixes = path.suffixes
+    if ".tar" in suffixes:
+        return True
+
+    if path.suffix in {".gz", ".bz2", ".xz"}:
+        return True
+
+    return False
+
+
 def convert_archive(
-    archive_path: Path,
+    root_path: Path,
     jsonl_path: Path | None = None,
     limit: int | None = None,
     overwrite: bool = False,
@@ -75,9 +96,9 @@ def convert_archive(
     """Convert a raw data archive to an OPTIMADE JSONL file.
 
     Parameters:
-        archive_path: The location of the `optimade.yaml` file to convert.
+        root_path: The root location containing the `optimade.yaml` file.
         jsonl_path: The location to write the JSONL file to. If not provided,
-            write to `<archive_path>/optimade.jsonl`.
+            write to `<root_path>/optimade.jsonl`.
         limit: The maximum number of entries to parse (useful for testing).
 
     Raises:
@@ -88,10 +109,10 @@ def convert_archive(
     """
 
     # load the config from the root of the archive
-    mc_config = Config.from_file(archive_path / "optimade.yaml")
+    mc_config = Config.from_file(root_path / "optimade.yaml")
 
     if not jsonl_path:
-        jsonl_path = archive_path / "optimade.jsonl"
+        jsonl_path = root_path / "optimade.jsonl"
     if jsonl_path.exists() and not overwrite:
         raise RuntimeError(f"Not overwriting existing file at {jsonl_path}")
 
@@ -99,8 +120,11 @@ def convert_archive(
     # and return the JSONL path
     if isinstance(mc_config.entries, JSONLConfig):
         if mc_config.entries.file is not None:
-            inflate_archive(archive_path, Path(mc_config.entries.file))
-        src_jsonl_path = archive_path / mc_config.entries.jsonl_path
+            src_path = (root_path / mc_config.entries.file).resolve()
+            if _needs_inflation(src_path):
+                inflate_archive(root_path, src_path)
+
+        src_jsonl_path = root_path / mc_config.entries.jsonl_path
         if jsonl_path != src_jsonl_path:
             # add a symlink to the specified jsonl_path
             if jsonl_path.exists():
@@ -108,29 +132,33 @@ def convert_archive(
                     jsonl_path.unlink()
                 else:
                     raise RuntimeError(f"Not overwriting existing file at {jsonl_path}")
-            jsonl_path.symlink_to(archive_path / src_jsonl_path)
+            jsonl_path.symlink_to(src_jsonl_path)
         return jsonl_path
 
     # first, decompress any provided data archives
     decompress_paths: set[Path] = set()
     for entry in mc_config.entries:
+        if isinstance(entry.entry_paths, AiidaEntryPath):
+            continue
+
         for entry_path in entry.entry_paths:
-            if getattr(entry_path, "matches", None):
-                decompress_paths.add((archive_path / str(entry_path.file)).resolve())
+            path = (root_path / str(entry_path.path)).resolve()
+            if _needs_inflation(path):
+                decompress_paths.add(path)
+
         for prop_path in entry.property_paths:
-            if getattr(prop_path, "matches", None):
-                decompress_paths.add((archive_path / str(prop_path.file)).resolve())
+            path = (root_path / str(prop_path.path)).resolve()
+            if _needs_inflation(path):
+                decompress_paths.add(path)
 
     for decompress_path in decompress_paths:
-        inflate_archive(archive_path, decompress_path)
+        inflate_archive(root_path, decompress_path)
 
     optimade_entries: dict[str, list[dict]] = defaultdict(list)
 
     for entry in mc_config.entries:
         optimade_entries[entry.entry_type].extend(
-            construct_entries(
-                archive_path, entry, PROVIDER_PREFIX, limit=limit
-            ).values()
+            construct_entries(root_path, entry, PROVIDER_PREFIX, limit=limit).values()
         )
 
     property_definitions = defaultdict(list)
@@ -138,7 +166,7 @@ def convert_archive(
         property_definitions[entry.entry_type].extend(entry.property_definitions)
 
     jsonl_path = write_optimade_jsonl(
-        archive_path,
+        root_path,
         optimade_entries,
         property_definitions,
         PROVIDER_PREFIX,
@@ -149,7 +177,7 @@ def convert_archive(
     return jsonl_path
 
 
-def inflate_archive(archive_path: Path, data_path: Path) -> None:
+def inflate_archive(root_path: Path, data_path: Path) -> None:
     """For a given compressed file in an archive entry, decompress it and place
     the contents at the root of the archive entry file system.
 
@@ -162,7 +190,7 @@ def inflate_archive(archive_path: Path, data_path: Path) -> None:
     import tarfile
     import zipfile
 
-    real_path = (Path(archive_path) / data_path).resolve()
+    real_path = (Path(root_path) / data_path).resolve()
     if not real_path.exists():
         raise FileNotFoundError(f"Could not find archive at {real_path=}")
 
@@ -202,37 +230,60 @@ def inflate_archive(archive_path: Path, data_path: Path) -> None:
 
 
 def _get_matches(
-    archive_path: Path, paths: list[ParsedFiles]
+    root_path: Path, paths: list[ParsedFiles]
 ) -> dict[str | None, list[Path]]:
-    """Loop through a set of `ParsedFile` objects and collect all
+    """Loop through a set of `ParsedFiles` objects and collect all
     files that match the provided glob/explicit syntax.
 
+    `ParsedFiles.path` may point to:
+      - a directory
+      - a regular file
+      - an archive that has already been inflated
+
+    If `matches` are provided and `file` is a directory, the matches are
+    resolved relative to that directory.
+
+    If `matches` are provided and `path` is a file/archive path, the matches are
+    resolved relative to the archive root for backwards compatibility.
+
     Returns:
-        A dictionary keyed by the archive file name (or None) containing
-        a list of paths found within that archive.
-
+        A dictionary keyed by the configured `path` value containing
+        a list of matched paths.
     """
-    matches_by_file: dict[str | None, list[Path]] = defaultdict(list)
+    matches_by_path: dict[str | None, list[Path]] = defaultdict(list)
+
     for path in paths:
+        root = (Path(root_path) / path.path).resolve()
         matches = path.matches or []
-        for m in matches:
-            if "*" in m:
-                wildcard = sorted(list(Path(archive_path).glob(m)))
-                if not wildcard:
-                    raise FileNotFoundError(
-                        f"Could not find any files matching wildcard {m!r}"
-                    )
-                matches_by_file[path.file] += wildcard
-            else:
-                matches_by_file[path.file] += [Path(archive_path) / m]
 
-        if not matches:
-            matches_by_file[path.file] += [Path(archive_path) / path.file]
+        if matches:
+            # If the configured file path is a directory, search inside it.
+            # Otherwise keep old behavior and interpret matches from archive root.
+            search_root = root if root.is_dir() else Path(root_path)
 
-    return matches_by_file
+            for m in matches:
+                if "*" in m:
+                    wildcard = sorted(search_root.glob(m))
+                    if not wildcard:
+                        raise FileNotFoundError(
+                            f"Could not find any files matching wildcard {m!r} "
+                            f"under {search_root!s}"
+                        )
+                    matches_by_path[path.path].extend(wildcard)
+                else:
+                    candidate = (search_root / m).resolve()
+                    matches_by_path[path.path].append(candidate)
+        else:
+            if root.is_dir():
+                raise ValueError(
+                    f"Configured path {path.path!r} is a directory, so `matches` must be provided."
+                )
+            matches_by_path[path.path].append(root)
+
+    return matches_by_path
 
 
-def _check_missing(matches_by_file: dict[str | None, list[Path]]) -> None:
+def _check_missing(matches_by_path: dict[str | None, list[Path]]) -> None:
     """Check if any matching files are missing.
 
     Raises:
@@ -240,8 +291,8 @@ def _check_missing(matches_by_file: dict[str | None, list[Path]]) -> None:
 
     """
     missing_paths = []
-    for archive_file_path in matches_by_file:
-        for _path in matches_by_file[archive_file_path]:
+    for archive_file_path in matches_by_path:
+        for _path in matches_by_path[archive_file_path]:
             if not _path.exists():
                 missing_paths.append(_path)
     if missing_paths:
@@ -249,8 +300,8 @@ def _check_missing(matches_by_file: dict[str | None, list[Path]]) -> None:
 
 
 def _parse_entries(
-    archive_path: Path,
-    matches_by_file: dict[str | None, list[Path]],
+    root_path: Path,
+    matches_by_path: dict[str | None, list[Path]],
     entry_type: str,
     limit: int | None = None,
 ) -> tuple[list[Any], list[str]]:
@@ -258,8 +309,8 @@ def _parse_entries(
     the intermediate format, also generating IDs for each.
 
     Parameters:
-        archive_path: The path to the archive.
-        matches_by_file: A dictionary of matches by file.
+        root_path: The path to the archive.
+        matches_by_path: A dictionary of matches by path.
         entry_type: The type of entry to parse.
         limit: The maximum number of entries to parse
 
@@ -271,24 +322,30 @@ def _parse_entries(
 
     parsed_entries = []
     entry_ids: list[str] = []
-    for archive_file in matches_by_file:
+    for archive_path in matches_by_path:
+        full_archive_path = (
+            (root_path / archive_path).resolve() if archive_path is not None else None
+        )
+
         for ind, _path in enumerate(
             tqdm.tqdm(
-                matches_by_file[archive_file],
+                matches_by_path[archive_path],
                 desc=f"Parsing {entry_type} files",
             )
         ):
             if limit and ind >= limit:
                 break
-
-            path_in_archive: Path = Path(_path).relative_to(Path(archive_path))
+            path_in_archive: Path = Path(_path).relative_to(Path(root_path).resolve())
             exceptions = {}
 
-            id_root = (
-                f"{archive_file}/{path_in_archive}"
-                if len(matches_by_file[archive_file]) > 1
-                else str(archive_file)
-            )
+            if full_archive_path is not None and full_archive_path.is_dir():
+                entry_id = str(path_in_archive)
+            elif len(matches_by_path[archive_path]) > 1:
+                # an archive file (e.g. zip)
+                entry_id = f"{archive_path}/{path_in_archive}"
+            else:
+                # a single file
+                entry_id = str(archive_path)
 
             for parser in ENTRY_PARSERS[entry_type]:
                 try:
@@ -299,11 +356,11 @@ def _parse_entries(
                     if isinstance(doc, list):
                         parsed_entries.extend(doc)
                         entry_ids.extend(
-                            [f"{id_root}/{ind}" for ind, _ in enumerate(doc)]
+                            [f"{entry_id}/{ind}" for ind, _ in enumerate(doc)]
                         )
                     else:
                         parsed_entries.append(doc)
-                        entry_ids.append(id_root)
+                        entry_ids.append(entry_id)
                     break
                 except Exception as exc:
                     exceptions[parser.__name__] = exc
@@ -519,7 +576,7 @@ def _assign_and_validate_properties(
 
 
 def construct_entries_from_files(
-    archive_path: Path,
+    root_path: Path,
     entry_config: EntryConfig,
     provider_prefix: str,
     limit: int | None = None,
@@ -546,12 +603,12 @@ def construct_entries_from_files(
         )
 
     # Collect entry paths using glob/explicit syntax
-    entry_matches_by_file = _get_matches(archive_path, entry_config.entry_paths)
+    entry_matches_by_file = _get_matches(root_path, entry_config.entry_paths)
     _check_missing(entry_matches_by_file)
 
     # Parse into intermediate format
     parsed_entries, file_path_entry_ids = _parse_entries(
-        archive_path,
+        root_path,
         entry_matches_by_file,
         entry_config.entry_type,
         limit=limit,
@@ -620,7 +677,7 @@ def _remove_ase_fields(optimade_entries: dict[str, EntryResource]) -> None:
 
 
 def construct_entries(
-    archive_path: Path,
+    root_path: Path,
     entry_config: EntryConfig,
     provider_prefix: str,
     limit: int | None = None,
@@ -640,16 +697,16 @@ def construct_entries(
             )
 
         optimade_entries = construct_entries_from_aiida(
-            archive_path, entry_config, provider_prefix
+            root_path, entry_config, provider_prefix
         )
     else:
         optimade_entries = construct_entries_from_files(
-            archive_path, entry_config, provider_prefix, limit=limit
+            root_path, entry_config, provider_prefix, limit=limit
         )
 
     # Parse properties from `property_paths` and assign them to the OPTIMADE entries
     property_matches_by_file: dict[str | None, list[Path]] = _get_matches(
-        archive_path, entry_config.property_paths
+        root_path, entry_config.property_paths
     )
     _check_missing(property_matches_by_file)
 
@@ -671,7 +728,7 @@ def construct_entries(
 
 
 def write_optimade_jsonl(
-    archive_path: Path,
+    root_path: Path,
     optimade_entries: dict[str, list[EntryResource]],
     property_definitions: dict[str, list[PropertyDefinition]],
     provider_prefix: str,
@@ -681,12 +738,12 @@ def write_optimade_jsonl(
     """Write OPTIMADE entries to a JSONL file.
 
     Parameters:
-        archive_path: Path to the archive.
+        root_path: Path to the archive.
         optimade_entries: OPTIMADE entries to write.
         property_definitions: Property definitions to write.
         provider_prefix: Prefix to use for the provider.
         jsonl_path: Path to write the JSONL file to. If not provided,
-            will write to `<archive_path>/optimade.jsonl`.
+            will write to `<root_path>/optimade.jsonl`.
 
     Raises:
         RuntimeError: If the JSONL file already exists.
@@ -695,7 +752,7 @@ def write_optimade_jsonl(
     import json
 
     if not jsonl_path:
-        jsonl_path = archive_path / "optimade.jsonl"
+        jsonl_path = root_path / "optimade.jsonl"
 
     if jsonl_path.exists() and not overwrite:
         raise RuntimeError(f"Not overwriting existing file at {jsonl_path}")
