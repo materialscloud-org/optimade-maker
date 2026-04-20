@@ -42,14 +42,20 @@ For a folder containing the data archive and the `optimade.yaml` file (such as i
 - `optimake convert .` to convert the entry into the JSONL format (see below).
 - `optimake serve .` to start the OPTIMADE API (this also converts the entry, if needed);
 
-For more detailed information see also `optimake --help`.
+For more detailed information, see `optimake --help`.
+
+### Tutorial
+
+The sections below provide a high-level overview of the functionality, but a step-by-step notebook tutorial is available in `examples/00_tutorial/tutorial.ipynb`, demonstrating the full workflow from raw data to a running OPTIMADE API and example queries.
+
+To run the tutorial locally, install `optimade-maker[tutorial]` and open the notebook with Jupyter.
 
 ### Annotating with `optimade.yaml`
 
-To annotate your structural data for `optimade-maker`, the data archive needs to be accompanied by an `optimade.yaml` config file. The following is a simple example for a zip archive (`structures.zip`) of cif files together with an optional property file (`properties.csv`):
+To annotate your structural data for `optimade-maker`, the data archive needs to be accompanied by an `optimade.yaml` config file. The following is a simple example for a ZIP archive (`structures.zip`) of CIF files together with an optional property file (`properties.csv`):
 
 ```yaml
-config_version: 0.1.1
+config_version: 0.2.0
 database_description: Simple DB
 
 entries:

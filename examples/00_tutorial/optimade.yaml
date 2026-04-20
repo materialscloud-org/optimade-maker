@@ -1,0 +1,17 @@
+config_version: 0.2.0
+database_description: Simple DB
+
+entries:
+  - entry_type: structures
+    entry_paths:
+      - path: cifs
+        matches: ["*.cif"]
+
+    property_paths:
+      - path: properties.csv
+    property_definitions:
+      - name: density
+        title: Density
+        description: Density of the material
+        unit: kg/m^3
+        type: float
