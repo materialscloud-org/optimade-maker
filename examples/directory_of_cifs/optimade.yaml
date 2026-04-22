@@ -4,12 +4,11 @@ database_description: Simple DB
 entries:
   - entry_type: structures
     entry_paths:
-      - path: structures.zip
-        matches:
-          - cifs/*/*.cif
+      - path: cifs
+        matches: ["*.cif"]
     # (optional) properties:
     property_paths:
-      - path: properties.csv
+      - path: properties.json
     property_definitions:
       - name: energy
         title: Total energy

@@ -7,8 +7,8 @@ from optimade.models.optimade_json import DataType
 from pydantic import ConfigDict, field_validator, model_validator
 
 IDENTIFIER_REGEX = r"^[a-z_][a-z_0-9]*$"
-__version__ = "0.1.1"
-_SUPPORTED_CONFIG_VERSIONS = {"0.1.0", "0.1.1"}
+__version__ = "0.2.0"
+_SUPPORTED_CONFIG_VERSIONS = {"0.1.0", "0.1.1", "0.2.0"}
 
 
 from pathlib import Path
@@ -70,19 +70,22 @@ class PropertyDefinition(BaseModel):
 
 
 class ParsedFiles(BaseModel):
-    file: str = Field(
-        description="The path to an archive or file to be unzipped/decompressed."
+    path: str = Field(
+        validation_alias="file",  # backwards compatibility
+        description=(
+            "Path to a file, archive, or directory. "
+            "Archives will be decompressed, directories will be traversed directly."
+        ),
     )
-
     matches: Optional[list[str]] = Field(
         None,
         description=(
-            "A list of matches to be used to filter the file contents. "
-            "Each match can use simple '*' wildcard syntax."
+            "Patterns to filter contents (glob-style). "
+            "Applied after decompression or when traversing directories."
         ),
         examples=[["structures/*.cif", "relaxed-structures/1.cif"]],
     )
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
 
 class EntryConfig(BaseModel):

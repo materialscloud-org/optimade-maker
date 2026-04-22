@@ -1,4 +1,4 @@
-config_version: 0.1.0
+config_version: 0.2.0
 
 database_description: >-
   This database contains some example CIFs.
@@ -6,11 +6,11 @@ database_description: >-
 entries:
   - entry_type: structures
     entry_paths:
-      - file: structures.zip
+      - path: structures.zip
         matches:
           - structures/cifs/*.cif
     property_paths:
-      - file: data.tar.gz
+      - path: data.tar.gz
         matches:
           - data/data.csv
           - data/data2.csv
