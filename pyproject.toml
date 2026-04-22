@@ -45,6 +45,7 @@ version_scheme = "post-release"
 pymatgen = ["pymatgen >= 2023.9"]
 aiida = ["aiida-core ~= 2.6"]
 ingest = ["optimade-maker[pymatgen,aiida]"]
+tutorial = ["jupyterlab"]
 tests = ["pytest~=8.3", "pytest-cov~=6.0", "numpy >= 1.22, < 3"]
 dev = ["optimade-maker[tests]", "ruff", "pre-commit", "mypy"]
 

@@ -1,0 +1,46 @@
+
+##########################################################################
+#               Crystallographic Information Format file
+#               Produced by PyCifRW module
+#
+#  This is a CIF file.  CIF has been adopted by the International
+#  Union of Crystallography as the standard for data archiving and
+#  transmission.
+#
+#  For information on this file format, follow the CIF links at
+#  http://www.iucr.org
+##########################################################################
+
+data_0
+
+loop_
+  _atom_site_label
+  _atom_site_fract_x
+  _atom_site_fract_y
+  _atom_site_fract_z
+  _atom_site_type_symbol
+         Sr1       0.33333333333333    0.6666666666666755  0.24999999999999484           Sr
+         Sr2       0.6666666666666466  0.3333333333333244  0.7499999999999949  Sr
+         C1        0.6665864979541027  0.6665864979514344  0.5       C
+         C2        0.6665864979541027  0.6665864979514344  0.0       C
+         C3        0.6665864979568098  6.996148258805112e-21         0.5       C
+         C4        0.6665864979568098  0.0       0.0       C
+         C5        0.999999999997293   0.6665864979514344  0.5       C
+         C6        0.999999999997293   0.6665864979514344  0.0       C
+         C7        0.9999999999893362  0.3334135020218611  0.5       C
+         C8        0.9999999999893362  0.3334135020218611  6.856887615856403e-37        C
+         C9        0.33341350203251724           0.3334135020218611  0.5       C
+         C10       0.33341350203251724           0.3334135020218611  0.0       C
+         C11       0.33341350204319026           1.2871350630101513e-20        0.5      C
+         C12       0.33341350204319026           0.0       3.598182623059814e-39        C
+_cell_angle_alpha                       90.0
+_cell_angle_beta                        90.0
+_cell_angle_gamma                       120.00000000006627
+_cell_length_a                          4.3196827147571
+_cell_length_b                          4.319682714748347
+_cell_length_c                          9.7058202670626
+loop_
+  _symmetry_equiv_pos_as_xyz
+         'x, y, z'
+_symmetry_int_tables_number             1
+_symmetry_space_group_name_H-M          'P 1'
