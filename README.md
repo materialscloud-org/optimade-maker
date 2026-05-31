@@ -12,6 +12,7 @@
 ![PyPI - License](https://img.shields.io/pypi/l/optimade-maker?color=blue)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/materialscloud-org/optimade-maker/ci.yml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18863676.svg)](https://doi.org/10.5281/zenodo.18863676)
+[![Paper DOI](https://img.shields.io/badge/Paper-10.1039%2FD6DD00125D-blue)](https://doi.org/10.1039/D6DD00125D)
 
 </div>
 
@@ -104,6 +105,14 @@ The toolkit supports a custom data pipeline (e.g. with an external MongoDB), by 
 
 - [OPTIMADE specification](https://github.com/Materials-Consortia/OPTIMADE/blob/develop/optimade.rst)
 - [OPTIMADE specification: JSON Lines format](https://github.com/Materials-Consortia/OPTIMADE/blob/develop/optimade.rst#the-optimade-json-lines-format-for-database-exchange)
+
+## Citation
+
+If you use `optimade-maker` in your research, please cite:
+
+> K. Eimre, M. L. Evans, B. Macaulay, X. Wang, J. Yu, N. Marzari, G.-M. Rignanese, and G. Pizzi, optimade-maker: Automated generation of interoperable materials APIs from static datasets, Digital Discovery (2026). DOI: [10.1039/D6DD00125D](https://doi.org/10.1039/D6DD00125D)
+
+Preprint: https://doi.org/10.48550/arXiv.2603.23536
 
 ## For developers
 
