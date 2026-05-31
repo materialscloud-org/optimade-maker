@@ -11,7 +11,7 @@
 [![PyPI - Version](https://img.shields.io/pypi/v/optimade-maker?color=4CC61E)](https://pypi.org/project/optimade-maker/)
 ![PyPI - License](https://img.shields.io/pypi/l/optimade-maker?color=blue)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/materialscloud-org/optimade-maker/ci.yml)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18863676.svg)](https://doi.org/10.5281/zenodo.18863676)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.18863676-blue)](https://doi.org/10.5281/zenodo.18863676)
 [![Paper DOI](https://img.shields.io/badge/Paper-10.1039%2FD6DD00125D-blue)](https://doi.org/10.1039/D6DD00125D)
 
 </div>
