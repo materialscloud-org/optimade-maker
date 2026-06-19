@@ -43,6 +43,8 @@ preferred-citation:
   type: article
   title: 'optimade-maker: automated generation of interoperable materials APIs from static datasets'
   doi: https://doi.org/10.1039/D6DD00125D
+  volume: 5
+  pages: 2469-2477
   journal: Digital Discovery
   authors:
     - given-names: Kristjan
