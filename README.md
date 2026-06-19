@@ -110,9 +110,9 @@ The toolkit supports a custom data pipeline (e.g. with an external MongoDB), by 
 
 If you use `optimade-maker` in your research, please cite:
 
-> K. Eimre, M. L. Evans, B. Macaulay, X. Wang, J. Yu, N. Marzari, G.-M. Rignanese, and G. Pizzi, optimade-maker: Automated generation of interoperable materials APIs from static datasets, Digital Discovery (2026). DOI: [10.1039/D6DD00125D](https://doi.org/10.1039/D6DD00125D)
+> K. Eimre, M. L. Evans, B. Macaulay, X. Wang, J. Yu, N. Marzari, G.-M. Rignanese, and G. Pizzi, optimade-maker: Automated generation of interoperable materials APIs from static datasets, Digital Discovery 5, 2469-2477 (2026). DOI: [10.1039/D6DD00125D](https://doi.org/10.1039/D6DD00125D)
 
-Preprint: https://doi.org/10.48550/arXiv.2603.23536
+The preprint is also available on arXiv at [10.48550/arXiv.2603.23536](https://doi.org/10.48550/arXiv.2603.23536).
 
 ## For developers
 
