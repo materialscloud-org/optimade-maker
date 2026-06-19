@@ -1,0 +1,71 @@
+# YAML 1.2
+# Metadata for citation of this software according to the CFF format (https://citation-file-format.github.io/)
+cff-version: 1.2.0
+message: If you use this software in a publication, please cite the Digital Discovery paper and source code archive on Zenodo.
+title: optimade-maker
+abstract: Tools for making OPTIMADE APIs from various formats of structural data (e.g. an archive of CIF files).
+repository-code: https://github.com/Materials-Consortia/optimade-maker
+url: https://github.com/Materials-Consortia/optimade-maker
+type: software
+license: MIT
+authors:
+- given-names: Kristjan
+  family-names: Eimre
+  orcid: https://orcid.org/0000-0002-3444-3286
+- given-names: Matthew L.
+  family-names: Evans
+  orcid: https://orcid.org/0000-0002-1182-9098
+- given-names: Bud
+  family-names: Macaulay
+  orcid: https://orcid.org/0009-0009-0653-3741
+- given-names: Xing
+  family-names: Wang
+  orcid: https://orcid.org/0000-0003-3356-9108
+- given-names: Jusong
+  family-names: Yu
+- given-names: Nicola
+  family-names: Marzari
+  orcid: https://orcid.org/0000-0002-9764-0199
+- given-names: Gian-Marco
+  family-names: Rignanese
+  orcid: https://orcid.org/0000-0002-1422-1205
+- given-names: Giovanni
+  family-names: Pizzi
+  orcid: https://orcid.org/0000-0002-3583-4377
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.20480275
+    description: "The software repository archive on Zenodo"
+  - type: doi
+    value: 10.1039/D6DD00125D
+    description: "The Digital Discovery paper describing optimade-maker"
+preferred-citation:
+  type: article
+  title: 'optimade-maker: automated generation of interoperable materials APIs from static datasets'
+  doi: https://doi.org/10.1039/D6DD00125D
+  journal: Digital Discovery
+  authors:
+    - given-names: Kristjan
+      family-names: Eimre
+      orcid: https://orcid.org/0000-0002-3444-3286
+    - given-names: Matthew L.
+      family-names: Evans
+      orcid: https://orcid.org/0000-0002-1182-9098
+    - given-names: Bud
+      family-names: Macaulay
+      orcid: https://orcid.org/0009-0009-0653-3741
+    - given-names: Xing
+      family-names: Wang
+      orcid: https://orcid.org/0000-0003-3356-9108
+    - given-names: Jusong
+      family-names: Yu
+    - given-names: Nicola
+      family-names: Marzari
+      orcid: https://orcid.org/0000-0002-9764-0199
+    - given-names: Gian-Marco
+      family-names: Rignanese
+      orcid: https://orcid.org/0000-0002-1422-1205
+    - given-names: Giovanni
+      family-names: Pizzi
+      orcid: https://orcid.org/0000-0002-3583-4377
+  year: 2026
